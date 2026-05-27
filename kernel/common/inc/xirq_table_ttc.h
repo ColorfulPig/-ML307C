@@ -1,0 +1,107 @@
+/*------------------------------------------------------------
+(C) Copyright [2006-2008] Marvell International Ltd.
+All Rights Reserved
+------------------------------------------------------------*/
+
+/*
+ * XIRQ table for TTC (coupled with the interrupt list, see intc_list.h).
+ * THIS FILE CAN BE #include'd ONLY ONCE
+ */
+	{SW_INT_SRC_0  ,  15  },
+	{SW_INT_SRC_1  ,  15  },
+	{SW_INT_SRC_2  ,  15  },
+	{SW_INT_SRC_3  ,  15  },
+	{SW_INT_SRC_4  ,  15   },
+	{SW_INT_SRC_5  ,  15  },
+	{SW_INT_SRC_6  ,  15  },
+	{SW_INT_SRC_7  ,  15  },
+	{SW_INT_SRC_8  ,  15  },
+	{SW_INT_SRC_9  ,  15  },
+	{SW_INT_SRC_10 ,  15  },
+	{SW_INT_SRC_11 ,  15  },
+	{SW_INT_SRC_12 ,  15  },
+	{SW_INT_SRC_13 ,  15  },
+	{SW_INT_SRC_14 ,  15  },
+	{SW_INT_SRC_15 ,  15  },
+	/* Internal Interrupts (or register interrupts ) [16:23] , 8 possible sources*/
+	{RI_INT_SRC_0  ,  0  },
+	{RI_INT_SRC_1  ,  7  },
+	{RI_INT_SRC_2  ,  5  },
+	{RI_INT_SRC_3  ,  4  },
+	{RI_INT_SRC_4  ,  5  },
+	{RI_INT_SRC_5  ,  10 },
+	{RI_INT_SRC_6  ,  15 },
+	{RI_INT_SRC_7  ,  2  },
+	{XSWI_INT_SRC_0,  0  },
+	/* iNTERNAL EXC  7  },EPTION 3 INTERRUPTS*/
+	{EIRQ_INT_0    ,  10 },
+	{EIRQ_INT_1    ,  15 },
+	{EIRQ_INT_2    ,  2  },
+	/* HW interrupts - sourced by GB peripherals (including the Modem) 48 possible interrupts*/
+	{INTC_SRC_ARM_DMA ,  15  },  /* 0x00 */
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+
+	{INTC_SRC_S_END ,  15  },   /* 0x10 */
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_IPC_DATA_ACK ,  7  },
+	{INTC_SRC_IPC_RD ,  5  },
+	{INTC_SRC_IPC_ACK , 4  },
+	{INTC_SRC_IPC_GP ,  5  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+
+	{INTC_SRC_S_END ,  15  },   /* 0x20 */
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+
+	{INTC_SRC_S_END ,  15  },   /* 0x30 */
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_COMM_UART ,   4  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  },
+	{INTC_SRC_S_END ,  15  }

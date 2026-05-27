@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'draw'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+
+]
+
+flash_source_files = [
+    'lv_draw_arc.c',
+    'lv_draw.c',
+    'lv_draw_img.c',
+    'lv_draw_label.c',
+    'lv_draw_line.c',
+    'lv_draw_mask.c',
+    'lv_draw_rect.c',
+    'lv_draw_transform.c',
+    'lv_draw_layer.c',
+    'lv_draw_triangle.c',
+    'lv_img_buf.c',
+    'lv_img_cache.c',
+    'lv_img_decoder.c',
+    'sw/lv_draw_sw_arc.c',
+    'sw/lv_draw_sw_blend.c',
+    'sw/lv_draw_sw_dither.c',
+    'sw/lv_draw_sw_gradient.c',
+    'sw/lv_draw_sw_img.c',
+    'sw/lv_draw_sw_layer.c',
+    'sw/lv_draw_sw_letter.c',
+    'sw/lv_draw_sw_line.c',
+    'sw/lv_draw_sw_polygon.c',
+    'sw/lv_draw_sw_rect.c',
+    'sw/lv_draw_sw_transform.c',
+    'sw/lv_draw_sw.c',
+
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    
+]
+
+private_incs = [
+    'sw',
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

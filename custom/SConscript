@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env')
+from ModuleBuild import *
+
+module = 'custom_main'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+    'custom_main/src/custom_main.c',
+    'custom_main/src/custom_uart.c',
+    'custom_main/src/custom_sps.c',
+    'custom_main/src/custom_fota.c',
+    'custom_main/src/custom_watchdog.c',
+    'custom_main/src/custom_network.c',
+    'custom_main/src/custom_track.c',
+    'custom_main/src/custom_gnss.c',
+    'custom_main/src/custom_profile.c',
+    'custom_main/src/custom_lbs.c',
+    'custom_main/src/custom_onenet.c',
+    'custom_main/src/custom_bms.c',
+    'custom_main/src/custom_bms_ota.c',
+    'custom_main/src/custom_led.c',
+    'custom_main/src/custom_gpio.c',
+    'custom_main/src/custom_system.c',
+    'custom_main/src/custom_usb.c',
+    'custom_main/src/custom_bluetooth.c',
+    'custom_main/src/custom_test.c',
+    'custom_main/src/custom_cloud.c',
+    'custom_main/src/custom_cloud_lte.c',
+    'custom_main/src/custom_common.c',
+    'custom_main/src/custom_datetime.c',
+]
+
+flash_source_files = [
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+]
+
+private_incs = [
+    current_dir + '/custom_main/inc',
+    '../src/modem',
+    '../third-party/cJSONFiles/cJSON',
+    '../third-party/wolfssl/wolfssl-3.15.3',
+    '../third-party/wolfssl/port',
+    '../third-party/mbedtls/include/mbedtls',
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

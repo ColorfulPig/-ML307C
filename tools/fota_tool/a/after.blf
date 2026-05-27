@@ -1,0 +1,9 @@
+[Image_List]
+Number_of_Images = 1
+1_Image_Enable = 1
+1_Image_Image_ID = 0x30
+1_Image_Path = user_app.bin
+1_Image_Flash_Entry_Address = 0x002D7000
+1_Image_ID_Name = 1
+
+

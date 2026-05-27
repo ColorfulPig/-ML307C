@@ -1,0 +1,3 @@
+Image ID: 0x4152424C
+Flash Entry Address: 0x200000
+Load Address: 0xBF900000

@@ -1,0 +1,1 @@
+./PPC.exe obj/atParser.ppp obj/atParser.pp >PPC.log

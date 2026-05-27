@@ -1,0 +1,115 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'extra'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+
+]
+
+flash_source_files = [
+    'lv_extra.c',
+    'layouts/flex/lv_flex.c',
+    'layouts/grid/lv_grid.c',
+    'themes/default/lv_theme_default.c',
+    'themes/basic/lv_theme_basic.c',
+    'themes/mono/lv_theme_mono.c',
+    'widgets/animimg/lv_animimg.c',
+    'widgets/calendar/lv_calendar.c',
+    'widgets/calendar/lv_calendar_header_arrow.c',
+    'widgets/calendar/lv_calendar_header_dropdown.c',
+    'widgets/chart/lv_chart.c',
+    'widgets/colorwheel/lv_colorwheel.c',
+    'widgets/imgbtn/lv_imgbtn.c',
+    'widgets/keyboard/lv_keyboard.c',
+    'widgets/led/lv_led.c',
+    'widgets/list/lv_list.c',
+    'widgets/menu/lv_menu.c',
+    'widgets/meter/lv_meter.c',
+    'widgets/msgbox/lv_msgbox.c',
+    'widgets/span/lv_span.c',
+    'widgets/spinbox/lv_spinbox.c',
+    'widgets/spinner/lv_spinner.c',
+    'widgets/tabview/lv_tabview.c',
+    'widgets/tileview/lv_tileview.c',
+    'widgets/win/lv_win.c',
+
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    
+]
+
+private_incs = [
+    'layouts',
+    'layouts/flex',
+    'layouts/grid',
+    'themes',
+    'themes/default',
+    'themes/basic',
+    'themes/mono',
+    'widgets',
+    'widgets/animimg',
+    'widgets/calendar,',
+    'widgets/chart',
+    'widgets/colorwheel',
+    'widgets/imgbtn',
+    'widgets/keyboard',
+    'widgets/led',
+    'widgets/list',
+    'widgets/menu',
+    'widgets/meter',
+    'widgets/msgbox',
+    'widgets/span',
+    'widgets/spinbox',
+    'widgets/spinner',
+    'widgets/tabview',
+    'widgets/tileview',
+    'widgets/win',
+    
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

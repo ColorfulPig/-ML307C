@@ -1,0 +1,375 @@
+#include "cm_os.h"
+#include "cm_uart.h"
+#include "cm_mem.h"
+#include "cm_sys.h"
+#include "cm_rtc.h"
+#include "cm_fs.h"
+#include "cm_sim.h"
+#include "cm_asocket.h"
+#include "cm_async_dns.h"
+#include "cm_ssl.h"
+#include "cm_fota.h"
+#include "cm_ota.h"
+#include "cm_http.h"
+#include "cm_adc.h"
+#include "cm_i2c.h"
+#include "cm_spi.h"
+#include "cm_pwm.h"
+#include "cm_keypad.h"
+#include "cm_lbs.h"
+#include "cm_gpio.h"
+#include "cm_iomux.h"
+#include "cm_pm.h"
+#include "cm_cpuinfo.h"
+#include "cm_audio_player.h"
+#include "cm_wifiscan.h"
+#include "cm_virt_at.h"
+#include "cm_sms.h"
+#include "cm_modem_info.h"
+#include "cm_usb.h"
+#include "cm_lcd.h"
+#include "cm_lwm2m.h"
+#include "cm_ping.h"
+#include "sockets.h"
+#include "netdb.h"
+#include "AudioHAL.h"
+#include "vpath_proxy.h"
+#include "cm_onewire.h"
+
+osKernelLock
+osKernelUnlock
+osKernelGetTickFreq
+osKernelGetTickCount
+
+osThreadNew
+osThreadGetName
+osThreadGetId
+osThreadGetState
+osThreadGetStackSize
+osThreadGetStackSpace
+//osThreadExit
+osThreadTerminate
+osThreadSetPriority
+osThreadGetPriority
+osThreadSuspend
+osThreadResume
+osThreadYield
+osThreadGetCount
+
+osDelay
+osTimerNew
+osTimerStart
+osTimerStop
+osTimerIsRunning
+osTimerDelete
+
+osEventFlagsNew
+osEventFlagsSet
+osEventFlagsWait
+osEventFlagsDelete
+
+osMutexNew
+osMutexAcquire
+osMutexRelease
+osMutexDelete
+
+osSemaphoreNew
+osSemaphoreAcquire
+osSemaphoreRelease
+osSemaphoreGetCount
+osSemaphoreDelete
+
+//osMessageQueueGetCapacity
+//osMessageQueueGetMsgSize
+//osMessageQueueGetCount
+//osMessageQueueGetSpace
+osMessageQueueDelete
+osMessageQueueGet
+osMessageQueueNew
+osMessageQueuePut
+
+cm_uart_open
+cm_uart_register_event
+cm_uart_close
+cm_uart_write
+cm_uart_read
+cm_uart_get_cfg
+cm_uart_get_rxrb_data_len
+cm_uart_clean
+cm_uart_is_sending
+
+cm_mem_get_heap_stats
+cm_malloc
+cm_realloc
+cm_calloc
+cm_free
+
+cm_sys_get_imei
+cm_sys_get_sn
+cm_sys_get_cm_ver
+cm_log_printf
+cm_assert
+
+cm_fs_open
+cm_fs_close
+cm_fs_read
+cm_fs_write
+cm_fs_seek
+cm_fs_delete
+cm_fs_move
+cm_fs_exist
+cm_fs_filesize
+cm_fs_getinfo
+
+cm_rtc_set_timezone
+cm_rtc_get_timezone
+cm_rtc_set_current_time
+cm_rtc_get_current_time
+cm_rtc_register_alarm_cb
+cm_rtc_enable_alarm
+cm_rtc_set_alarm
+cm_rtc_get_alarm
+
+cm_sim_get_imsi
+
+cm_gpio_init
+cm_gpio_deinit
+cm_gpio_set_level
+cm_gpio_get_level
+cm_gpio_set_pull
+cm_gpio_get_pull
+cm_gpio_set_direction
+cm_gpio_get_direction
+cm_gpio_interrupt_register
+cm_gpio_interrupt_enable
+cm_gpio_interrupt_disable
+cm_gpio_ioctl
+cm_iomux_set_pin_func
+cm_iomux_get_pin_func
+cm_iomux_set_pin_cmd
+cm_pm_reboot
+cm_pm_poweroff
+cm_pm_get_power_on_reason
+cm_pm_work_lock
+cm_pm_work_unlock
+cm_pm_init
+cm_pm_powerkey_regist_callback
+cm_keypad_config
+cm_keypad_init
+cm_keypad_register
+cm_keypad_unregister
+cm_keypad_deinit
+cm_keypad_sleep
+
+cm_pwm_set_clk
+cm_pwm_open_ns
+cm_pwm_close
+
+cm_lbs_init
+cm_lbs_deinit
+cm_lbs_location
+cm_lbs_get_attr
+
+cm_asocket_eloop
+cm_asocket_open
+cm_asocket_connect
+cm_asocket_close
+cm_async_dns_set_priority
+cm_async_dns_eloop
+cm_async_dns_request_ex
+cm_async_dns_get_type_by_priority
+cm_get_active_cid
+cm_eloop_create
+cm_eloop_delete
+cm_eloop_wait_event
+cm_eloop_register_event
+cm_eloop_unregister_event
+cm_eloop_post_event
+cm_eloop_default
+cm_get_ipv4v6_local_addr
+
+lwip_accept
+lwip_bind
+lwip_shutdown
+lwip_shutdown2
+lwip_getsockname
+lwip_getpeername
+lwip_setsockopt
+lwip_getsockopt
+lwip_close
+lwip_close2
+lwip_connect
+lwip_listen
+lwip_recv
+lwip_read
+lwip_recvfrom
+lwip_send
+lwip_sendto
+lwip_socket
+lwip_socket_with_callback
+lwip_write
+lwip_select
+lwip_ioctl
+lwip_fcntl
+lwip_eventfd
+lwip_getthreaderrno
+lwip_getsockvalid
+lwip_getsockerrno
+lwip_getsocktype
+lwip_getsocknetconn
+lwip_getsocktcppcb
+lwip_getsockudppcb
+lwip_get_sock_localport
+lwip_get_sock_remoteport
+lwip_get_sock_isipv6
+lwip_get_sock_pdu_offset
+lwip_trigger_process
+lwip_get_sock_localipXaddr
+lwip_get_sock_remoteipXaddr
+lwip_get_sock_vlanid
+readn
+writen
+readline
+lwip_readv
+lwip_writev
+lwip_recvmsg
+lwip_sendmsg
+ipaddr_addr
+ipaddr_aton
+ipaddr_ntoa
+ip6addr_aton
+ip6addr_ntoa
+inet_ntop
+inet_pton
+lwip_gethostbyname
+lwip_getaddrinfo
+lwip_freeaddrinfo
+get_lwip_errno
+
+cm_fota_set_url
+cm_fota_read_config
+cm_fota_exec_upgrade
+cm_fota_set_reboot_time
+cm_fota_res_callback_register
+
+cm_ota_set_otasize
+cm_ota_get_capacity
+cm_ota_init
+cm_ota_firmware_write
+cm_ota_get_written_size
+cm_ota_firmware_erase
+cm_ota_upgrade
+
+cm_httpclient_uri_encode
+cm_httpclient_uri_encode_component
+cm_httpclient_create
+cm_httpclient_delete
+cm_httpclient_is_busy
+cm_httpclient_set_cfg
+cm_httpclient_terminate
+cm_httpclient_custom_header_set
+cm_httpclient_custom_header_free
+cm_httpclient_specific_header_set
+cm_httpclient_specific_header_free
+cm_httpclient_get_response_code
+cm_httpclient_parse_header
+cm_httpclient_sync_request
+cm_httpclient_sync_free_data
+cm_httpclient_request_start
+cm_httpclient_request_send
+cm_httpclient_request_end
+
+cm_i2c_open
+cm_i2c_close
+cm_i2c_write
+cm_i2c_read
+cm_adc_read
+cm_adc_vbat_read
+cm_spi_open
+cm_spi_close
+cm_spi_write
+cm_spi_read
+cm_spi_write_then_read
+cm_ssl_setopt
+cm_ssl_close
+cm_ssl_write
+cm_ssl_read
+cm_ssl_check_pending
+cm_ssl_get_bytes_avail
+cm_ssl_conn_with_host
+cm_ssl_list_cipher
+
+cm_cpuinfo_record_start
+cm_cpuinfo_record_read
+cm_cpuinfo_record_stop
+cm_cpuinfo_get_cpuid
+
+cm_audio_play_set_cfg
+cm_audio_play_get_cfg
+cm_audio_play_file
+cm_audio_player_pause
+cm_audio_player_resume
+cm_audio_player_stop
+cm_audio_player_stream_open
+cm_audio_player_stream_push
+cm_audio_player_stream_close
+cm_audio_player_stream_clear_close
+cm_audio_player_stream_cb_reg
+
+cm_wifiscan_cfg
+cm_wifiscan_start
+cm_wifiscan_stop
+cm_wifiscan_query
+
+cm_virt_at_send_async
+cm_virt_at_send_sync
+cm_virt_at_urc_cb_reg
+cm_virt_at_urc_cb_dereg
+
+cm_sms_send_txt
+cm_sms_send_pdu
+
+cm_modem_info_cell
+cm_modem_info_radio
+
+cm_usb2com_register_recv_cb
+cm_usb2com_send_data
+cm_usb2com_register_status_cb
+cm_usb2com_get_status
+
+cm_lcd_write_cmd
+cm_lcd_write_data
+cm_lcd_write_buf
+cm_lcd_init
+cm_lcd_deinit
+cm_lcd_read_id
+
+cm_lwm2m_create
+cm_lwm2m_delete
+cm_lwm2m_add_obj
+cm_lwm2m_del_obj
+cm_lwm2m_discover
+cm_lwm2m_open
+cm_lwm2m_update
+cm_lwm2m_close
+cm_lwm2m_notify_packing
+cm_lwm2m_notify
+cm_lwm2m_read_rsp
+cm_lwm2m_write_rsp
+cm_lwm2m_execute_rsp
+cm_lwm2m_param_rsp
+cm_lwm2m_observe_rsp
+
+cm_ping_init
+cm_ping_start
+
+AudioHAL_AifBindCodec_CB
+
+vpathSetMode
+
+cm_onewire_init
+cm_onewire_setup_reset
+cm_onewire_write_byte
+cm_onewire_read_byte
+cm_onewire_write_data
+cm_onewire_read_data

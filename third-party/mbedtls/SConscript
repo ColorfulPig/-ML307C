@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'mbedtls'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+
+]
+
+flash_source_files = [
+    'library/aes.c',
+    'library/asn1parse.c',
+    'library/base64.c',
+    'library/bignum.c',
+    'library/cipher.c',
+    'library/cipher_wrap.c',
+    'library/ctr_drbg.c',
+    'library/debug.c',
+    'library/entropy.c',
+    'library/error.c',
+    'library/md.c',
+    'library/md_wrap.c',
+    'library/oid.c',
+    'library/pem.c',
+    'library/pk.c',
+    'library/pk_wrap.c',
+    'library/pkparse.c',
+    'library/platform.c',
+    'library/platform_util.c',
+    'library/rsa.c',
+    'library/rsa_internal.c',
+    'library/sha1.c',
+    'library/sha256.c',
+    'library/ssl_ciphersuites.c',
+    'library/ssl_cli.c',
+    'library/ssl_cookie.c',
+    'library/ssl_tls.c',
+    'library/x509.c',
+    'library/x509_crt.c',
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    
+]
+
+private_incs = [
+    'include',
+    'include/mbedtls',
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+    'mbedtls'
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

@@ -1,0 +1,42 @@
+#ifndef __CUSTOM_GLOBAL_H__
+#define __CUSTOM_GLOBAL_H__
+
+#ifdef	CUSTOM_GLOBAL
+#define   GLOBALS_EXT
+#else
+#define   GLOBALS_EXT    extern
+#endif
+
+#define	APP_VERSION_HIGH	1
+#define	APP_VERSION_MID		0
+#define	APP_VERSION_LOW		0
+
+
+#define SN_BUF_SIZE			(24)
+#define IMEI_BUF_SIZE		(20)
+#define IMSI_BUF_SIZE		(20)
+#define ICCID_BUF_SIZE		(24)
+#define SDKVER_BUF_SIZE		(64)
+#define APPVER_BUF_SIZE		(64)
+
+GLOBALS_EXT	char	g_ReadyOK;
+GLOBALS_EXT	char	g_SN[SN_BUF_SIZE];
+GLOBALS_EXT	char	g_IMEI[IMEI_BUF_SIZE];
+GLOBALS_EXT	char	g_IMSI[IMSI_BUF_SIZE];
+GLOBALS_EXT	char	g_ICCID[ICCID_BUF_SIZE];
+GLOBALS_EXT	char	g_SDKVER[SDKVER_BUF_SIZE];
+GLOBALS_EXT	char	g_APPVER[APPVER_BUF_SIZE];
+
+GLOBALS_EXT	cm_fs_system_info_t fs_system_info;
+GLOBALS_EXT	cm_heap_stats_t heap_stats;
+
+/*
+SN: 20226M0030855T118294
+IMEI: 860720088182953
+IMSI: 460240521685297
+ICCID: 898608421024D0985297
+SDKVER: ML307C-DC-CN_OpenCPU_Standard_1.0.0.2504221759_release
+*/
+
+#endif
+

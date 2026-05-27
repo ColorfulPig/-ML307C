@@ -1,0 +1,1 @@
+FBFMake_CF_V1.6-150.exe -o system_patch.bin -f config_app -a a -b a

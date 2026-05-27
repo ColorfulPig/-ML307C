@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# ===================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+# ===================================================================
+
+
+import os
+Import('env', 'root_dir', 'demo_support')
+
+objects = []
+script = os.path.join(demo_support, 'SConscript')  # 必须使用相对路径
+demo_dir = os.path.join(root_dir, 'examples', demo_support)
+
+if not os.path.isdir(demo_dir):
+    print(demo_dir)
+    raise ValueError("参数错误，构建终止")
+
+objects.extend(SConscript(script))  # 输出项合并至list
+Return('objects')

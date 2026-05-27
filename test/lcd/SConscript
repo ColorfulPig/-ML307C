@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'lcd'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+
+]
+
+flash_source_files = [
+    'src/cm_demo_lcd.c'
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    
+]
+
+private_incs = [
+    'inc'
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+    'lcd'
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

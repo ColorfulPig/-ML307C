@@ -1,0 +1,83 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'aliyun'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+	
+]
+
+flash_source_files = [
+    'core/aiot_state_api.c',
+    'core/aiot_mqtt_api.c',
+    'core/sysdep/core_adapter.c',
+    'core/sysdep/core_sysdep.c',    
+    'core/utils/core_auth.c',
+    'core/utils/core_diag.c',
+    'core/utils/core_global.c',
+    'core/utils/core_http.c',
+    'core/utils/core_log.c',
+    'core/utils/core_sha256.c',
+    'core/utils/core_string.c',
+	'external/ali_ca_cert.c',	
+	'portfiles/aiot_port/freertos_port.c',	
+	'components/ota/aiot_ota_api.c',
+	'components/ota/ota_md5.c',
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    
+]
+
+private_incs = [
+    'core',
+    'core/sysdep',
+	'core/utils',
+	'components/ota',
+	'../mbedtls/include',
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

@@ -1,0 +1,1 @@
+./PPManCMD.exe -Sobj/hsiupdlibdev.i  -NTestDB.txt >PPManCMD.log

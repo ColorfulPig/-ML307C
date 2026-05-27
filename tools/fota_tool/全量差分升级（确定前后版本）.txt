@@ -1,0 +1,1 @@
+adiff.exe -p system_old.img system_new.img system_patch.bin -a1 user_app user_app_old.bin user_app_new.bin -l fsall -s 20000

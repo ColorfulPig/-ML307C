@@ -1,0 +1,97 @@
+# -*- coding: utf-8 -*-
+#====================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+#====================================================================
+
+
+Import('env', 'root_dir')
+from ModuleBuild import *
+
+module = 'demo_main'  # 模块名，同簇模块不得重名
+current_dir = os.path.join(Dir('.').abspath)
+target = None
+
+
+#========================================================
+# ram_source_files：运行在ram中
+# flash_source_files：运行在flash中
+#========================================================
+ram_source_files = [
+
+]
+
+flash_source_files = [
+    'src/cm_demo_main.c'
+]
+
+
+#========================================================
+# public_incs：置于工程环境中，供其他模块引用
+# private_incs：仅在本模块中引用
+#========================================================
+public_incs = [
+    current_dir + '/inc',
+    current_dir + '/../uart/inc',
+    current_dir + '/../fs/inc',
+    current_dir + '/../fota/inc',
+    current_dir + '/../asocket/inc',
+    current_dir + '/../ntp/inc',
+    current_dir + '/../http/inc',
+    current_dir + '/../gpio/inc',
+    #current_dir + '/../gnss/inc',
+    current_dir + '/../keypad/inc',
+    current_dir + '/../lbs/inc',
+    current_dir + '/../lcd/inc',
+    current_dir + '/../pm/inc',
+    current_dir + '/../pwm/inc',
+    current_dir + '/../cJSON/inc',
+    current_dir + '/../clk/inc',
+    current_dir + '/../ssl/inc',
+    current_dir + '/../mqtt/inc',
+    current_dir + '/../ftp/inc',
+    current_dir + '/../adc/inc',
+    current_dir + '/../i2c/inc',
+    current_dir + '/../spi/inc',
+    current_dir + '/../audio/inc', 
+    current_dir + '/../wifiscan/inc',
+    current_dir + '/../virt_at/inc',
+    current_dir + '/../lwip/inc',
+    current_dir + '/../sms/inc',
+    current_dir + '/../modem/inc',
+    current_dir + '/../lwm2m/inc',
+    current_dir + '/../ping/inc',
+    current_dir + '/../../src/modem',
+    current_dir + '/../onewire/inc',
+    current_dir + '/../gnss/inc',
+]
+
+private_incs = [
+    'inc'
+]
+
+
+#========================================================
+# cpp_define：仅适用于本模块，对其他模块不可见
+#========================================================
+cpp_defines = [
+]
+
+
+#========================================================
+# 模块编译
+#========================================================
+mod = ModuleBuild(env,
+        name = module,
+        ram_srcs = ram_source_files,
+        flash_srcs = flash_source_files,
+        pub_incs = public_incs,
+        pri_incs = private_incs,
+        cpp_define = cpp_defines
+)
+
+target = mod.build_object()
+
+Return('target')

@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+# ===================================================================
+#
+# Copyright © 2023 China Mobile IOT. All rights reserved.
+#
+#
+# ===================================================================
+
+
+import os
+Import('env', 'root_dir')
+
+
+build_list = [
+    'porting',  #porting为必须，其他模块按需添加
+
+]
+
+objects = []
+for mod in build_list:
+    script = os.path.join(mod, 'SConscript')  # 必须使用相对路径
+    objects.extend(SConscript(script))  # 输出项合并至list
+
+
+Return('objects')

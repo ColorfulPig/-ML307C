@@ -1,0 +1,16 @@
+.sconsign.dblite
+
+# Build outputs
+out/
+
+# Local temp folders
+.codex-tmp/
+.tmp/
+tmp_video_frames/
+
+# IDE/project-local files
+SourceInsight/
+
+# Large prebuilt libraries and toolchains
+kernel/common/ML307C/lib/
+tools/toolchain/
