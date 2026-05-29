@@ -9,8 +9,11 @@
 
 #define	APP_VERSION_HIGH	1
 #define	APP_VERSION_MID		0
-#define	APP_VERSION_LOW		0
+#define	APP_VERSION_LOW		1
 
+#define	testAPP_VERSION_HIGH	1
+#define	testAPP_VERSION_MID		0
+#define	testAPP_VERSION_LOW		0
 
 #define SN_BUF_SIZE			(24)
 #define IMEI_BUF_SIZE		(20)
@@ -26,6 +29,7 @@ GLOBALS_EXT	char	g_IMSI[IMSI_BUF_SIZE];
 GLOBALS_EXT	char	g_ICCID[ICCID_BUF_SIZE];
 GLOBALS_EXT	char	g_SDKVER[SDKVER_BUF_SIZE];
 GLOBALS_EXT	char	g_APPVER[APPVER_BUF_SIZE];
+GLOBALS_EXT	char	g_testAPPVER[APPVER_BUF_SIZE];
 
 GLOBALS_EXT	cm_fs_system_info_t fs_system_info;
 GLOBALS_EXT	cm_heap_stats_t heap_stats;

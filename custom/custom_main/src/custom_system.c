@@ -9,7 +9,7 @@
 
 #define CUSTOM_SYSTEM_ICCID_RETRY_TIMES		5
 #define CUSTOM_SYSTEM_ICCID_RETRY_DELAY_MS	1000
-
+#define TEST_Switch							1
 static int custom_system_read_iccid_with_retry(char *iccid, int retry_times, int retry_delay_ms)
 {
 	int ret = -1;
@@ -121,6 +121,12 @@ void custom_system_task(void *p)
 		// 打印时间
 		custom_get_now_datetime(&dt);
 		SYSTEM_printf("%04d-%02d-%02d %02d:%02d:%02d", dt.tm_year, dt.tm_mon, dt.tm_mday, dt.tm_hour, dt.tm_min, dt.tm_sec);
+
+		#if TEST_Switch
+		// 获取TEST_APP版本号
+		common_sprintf((uint8_t *)g_testAPPVER, "%d.%d.%d", testAPP_VERSION_HIGH, testAPP_VERSION_MID, testAPP_VERSION_LOW);
+		SYSTEM_printf("g_testAPPVER: %s", g_testAPPVER);
+		#endif
 
 		// 防止启动时未检测出SIM卡
 		if(strlen(g_ICCID) == 0)

@@ -74,12 +74,13 @@ env['IMAGE_DIR'] = os.path.join(PathConfig.IMAGE_DIR)
 env['OBJECT_DIR'] = os.path.join(PathConfig.OBJECT_DIR)
 env['BASELINE_DIR'] = os.path.join(PathConfig.BASELINE_DIR)
 env['LDS_SRC'] = os.path.join(PathConfig.LINK_DIR, 'app.ld')
+env['OUTPUT_BASE'] = get_pkg_base_name()
 
 
 # 链接配置
 # ①链接器文件生成
 # ②链接器，map文件配置
-target_map = env['TARGET_NAME'] + '.map'
+target_map = env['OUTPUT_BASE'] + '.map'
 env.AppendUnique(LINKFLAGS=['-L%s' % env['IMAGE_DIR']])
 env.AppendUnique(LINKFLAGS=['-T%s' % 'linker.lds'])
 env.AppendUnique(LINKFLAGS=['-Wl,-Map=' + os.path.join(env['IMAGE_DIR'], target_map)])

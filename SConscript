@@ -56,7 +56,7 @@ for lib in lib_files:
 
 
 # 生成可执行文件
-elf = env.Program(os.path.join(env['IMAGE_DIR'], env['TARGET_NAME']), objects, LIBS = libs)
+elf = env.Program(os.path.join(env['IMAGE_DIR'], env['OUTPUT_BASE']), objects, LIBS = libs)
 map = os.path.join(env['IMAGE_DIR'], target_map)
 bin = env.Binary(elf)
 lds = env.GenLds(os.path.join(env['IMAGE_DIR'], 'linker'), env['LDS_SRC'])
