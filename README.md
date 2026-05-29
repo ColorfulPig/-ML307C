@@ -1,3 +1,15 @@
+# ota生成包 脚本说明
+1、改 fota_versions.txt
+    $oldApp  = "1.0.0"
+    $oldTest = "1.0.0"
+    $newApp  = "1.0.1"
+    $newTest = "1.0.0"
+2、双击 make_fota_package.bat
+3、去 out\fota_packages\... 里拿 system_patch.bin
+
+
+
+
 # 中移物联网 OpenCPU SDK 简介
 
 ## **注意事项（必读）**
