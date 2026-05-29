@@ -20,7 +20,7 @@ void custom_gnss_nmea_callback(const char *nmea, uint32_t len)
 	uint8_t total_satellite = 0;
 	char *gsv_nmea;
 	
-	//GNSS_printf("%s: %s", __func__, (char *)nmea);
+	//GNSS_printf("%s: len=%d %s", __func__, len, (char *)nmea);
 
 	// 计算可视卫星数
 	gsv_nmea = strstr(nmea, "$GPGSV");
@@ -143,10 +143,12 @@ int	custom_gnss_enable(uint8_t enable)
 			// 打开GNSS
 			if(custom_network_IsPDPActive())
 			{
+				GNSS_printf("%s: open gnss with agnss", __func__);
 				cm_gnss_open(CM_GNSS_TYPE_GPS|CM_GNSS_TYPE_BDS|CM_GNSS_TYPE_QZSS|CM_GNSS_TYPE_GLO, CM_AGNSS_ENABLE);
 			}
 			else
 			{
+				GNSS_printf("%s: open gnss without agnss", __func__);
 				cm_gnss_open(CM_GNSS_TYPE_GPS|CM_GNSS_TYPE_BDS|CM_GNSS_TYPE_QZSS|CM_GNSS_TYPE_GLO, CM_AGNSS_DISABLE);
 			}
 			
@@ -197,6 +199,7 @@ void custom_gnss_task(void *p)
 				if(Agnss_update == 0)
 				{
 					Agnss_update = 1;
+					GNSS_printf("%s: start agnss update", __func__);
 					cm_agnss_data_start_update(custom_agnss_update_callback);
 				}
 			}	
@@ -210,6 +213,7 @@ void custom_gnss_task(void *p)
 				GNSS_printf("fix=%d",gnss_location.fix);						// 定位类型
 				GNSS_printf("spkm=%lf",gnss_location.spkm);						// 水平运动速度,float,单位Km/h,默认值为0
 				GNSS_printf("nsat=%d",gnss_location.nsat);						// 参与定位的卫星数,uint8_t,默认值为0
+				GNSS_printf("vsat=%d",gnss_location.vsat);						// 可视卫星数,uint8_t,默认值为0
 			}		
 		}
 	}
