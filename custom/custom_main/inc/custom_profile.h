@@ -30,6 +30,9 @@
 #define	CONFIG_ITEM_BT_MAC				"bluetooth_mac"
 #define	CONFIG_DATA_BT_MAC				""
 
+#define	CONFIG_ITEM_LBS_ONEOS_PID		"lbs_oneos_pid"
+#define	CONFIG_DATA_LBS_ONEOS_PID		"fCavBBzh0S"
+
 // 注意：参数改变可能要更新custom_object_create(),custom_profile_update(),custom_profile_load()这三个函数
 
 int custom_profile_init(void);

@@ -128,6 +128,7 @@ int custom_object_create(void)								// 参数版本改变时，添加参数初
 		custom_profile_addNumber(CONFIG_ITEM_BMS_TIMING_TASK, CONFIG_DATA_BMS_TIMING_TASK);
 		custom_profile_addNumber(CONFIG_ITEM_BMS_TIMING_TIME, CONFIG_DATA_BMS_TIMING_TIME);
 		custom_profile_addString(CONFIG_ITEM_BT_MAC, CONFIG_DATA_BT_MAC);
+		custom_profile_addString(CONFIG_ITEM_LBS_ONEOS_PID, CONFIG_DATA_LBS_ONEOS_PID);
 	}
 	
 	return 0;
@@ -152,6 +153,10 @@ int custom_profile_update(void)								// 参数版本改变时，需要参数�
 		int remain_bms_ota_timing_hour=0;
 		custom_profile_getNumber(CONFIG_ITEM_BMS_TIMING_TIME, &remain_bms_ota_timing_hour);
 		cJSON_printf("remain_bms_ota_timing_hour:%d", remain_bms_ota_timing_hour);
+
+		char remain_lbs_oneos_pid[64]={0};
+		custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, remain_lbs_oneos_pid);
+		cJSON_printf("remain_lbs_oneos_pid:%s", remain_lbs_oneos_pid);
 		
 		////////////////////////////////////////////////////////////////
 
@@ -165,6 +170,7 @@ int custom_profile_update(void)								// 参数版本改变时，需要参数�
 		custom_profile_setString(CONFIG_ITEM_DEVICE_ID, remain_device_id);
 		custom_profile_setNumber(CONFIG_ITEM_BMS_TIMING_TASK, remain_bms_ota_timing_upgrade);
 		custom_profile_setNumber(CONFIG_ITEM_BMS_TIMING_TIME, remain_bms_ota_timing_hour);
+		custom_profile_setString(CONFIG_ITEM_LBS_ONEOS_PID, remain_lbs_oneos_pid);
 
 		////////////////////////////////////////////////////////////////
 				
@@ -213,6 +219,16 @@ int custom_profile_load(void)
 		char bluetooth_mac[32]={0};
 		custom_profile_getString(CONFIG_ITEM_BT_MAC, bluetooth_mac);
 		cJSON_printf("bluetooth_mac: %s", bluetooth_mac);
+
+		char lbs_oneos_pid[64]={0};
+		custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, lbs_oneos_pid);
+		if(strlen(lbs_oneos_pid) == 0)
+		{
+			custom_profile_setString(CONFIG_ITEM_LBS_ONEOS_PID, CONFIG_DATA_LBS_ONEOS_PID);
+			custom_object_to_profile(0);
+			custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, lbs_oneos_pid);
+		}
+		cJSON_printf("lbs_oneos_pid: %s", lbs_oneos_pid);
 		
 		cJSON_printf("========================");
 	}

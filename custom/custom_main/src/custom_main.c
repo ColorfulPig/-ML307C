@@ -16,6 +16,7 @@
 #include "custom_test.h"
 #include "custom_cloud.h"
 #include "custom_gnss.h"
+#include "custom_lbs.h"
 #include "custom_bms_ota.h"
 #include "custom_cloud_lte.h"
 
@@ -31,6 +32,7 @@ int cm_opencpu_entry(void *param)
 	SYSTEM_printf("######################cm_opencpu_entry########################");
 	
 	custom_profile_init();
+	custom_lbs_init();
 	custom_network_init();
 	custom_watchdog_init();
 	custom_system_init();

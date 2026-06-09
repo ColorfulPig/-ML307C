@@ -1,9 +1,12 @@
 ﻿
 #include "custom_lbs.h"
 #include "custom_track.h"
+#include "custom_profile.h"
+#include "cm_async_dns.h"
 
 int lbs_location_Update = 0;			// 更新标志
 custom_lbs_location_t lbs_location;
+static int s_lbs_started = 0;
 
 void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location,void *cb_arg)
 {
@@ -11,6 +14,7 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 	int ret =0;
 
 	LBS_printf("cm_lbs_callback_event =%d\r\n",event);
+	lbs_location.state = event;
 
 	if(event == CM_LBS_LOCATION_OK)
 	{	  
@@ -33,8 +37,6 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 		LBS_printf("location.citycode=%s\r\n",location->citycode);
 		LBS_printf("location.adcode=%s\r\n",location->adcode);
 		LBS_printf("location.poi=%s\r\n",location->poi);
-
-		cm_lbs_deinit();
 
 		if((lbs_platform == CM_LBS_PLAT_AMAP10) || (lbs_platform == CM_LBS_PLAT_AMAP20))
 		{
@@ -67,18 +69,29 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 				LBS_printf("cm_lbs_get_attr ret=%d\r\n",ret);
 			}
 		}
+
 	}
+
+	cm_lbs_deinit();
+	s_lbs_started = 0;
 }
 
 int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 {
 	int ret = -1;
+
+	if(s_lbs_started == 1)
+	{
+		LBS_printf("%s: lbs request is already in progress\r\n", __func__);
+		return 0;
+	}
 	
 	if((lbs_platform == CM_LBS_PLAT_AMAP10) || (lbs_platform == CM_LBS_PLAT_AMAP20))
 	{
 		uint8_t aplikey[64] = {0};
 		cm_lbs_amap_location_attr_t apap_cfg = {0};
 		cm_lbs_amap_location_attr_t apap_cfg_acqure = {aplikey,0};
+		int get_attr_ret = 0;
 
 		//高德1.0平台；CM:LBS:platform:key:time_out:						   nearbts_enable:digital_sign_enable:digital_key
 		//高德2.0平台；CM:LBS:platform:key:time_out:show_fields_enable:nearbts_enable:digital_sign_enable:digital_key
@@ -100,22 +113,30 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		// LBS初始化
 		ret = cm_lbs_init(lbs_platform, &apap_cfg);
 		LBS_printf("cm_lbs_init ret=%d\r\n",ret);
+		if(ret != 0)
+		{
+			return ret;
+		}
 		
 		// 获取平台定位配置信息
-		ret = cm_lbs_get_attr(lbs_platform, &apap_cfg_acqure);
-		if(ret == 0)
+		get_attr_ret = cm_lbs_get_attr(lbs_platform, &apap_cfg_acqure);
+		if(get_attr_ret == 0)
 		{
 			LBS_printf("apap_cfg_acqure timeout=%d\r\n",apap_cfg_acqure.time_out);
 			LBS_printf("apap_cfg_acqure aplikey =%s\r\n",apap_cfg_acqure.api_key);
 		}
 		else
 		{
-			LBS_printf("cm_lbs_get_attr ret=%d\r\n",ret);
+			LBS_printf("cm_lbs_get_attr ret=%d\r\n",get_attr_ret);
 		}
 
 		// LBS获取位置信息(异步)
 		ret = cm_lbs_location(custom_lbs_cb, NULL);
 		LBS_printf("cm_lbs_location ret=%d\r\n",ret);
+		if(ret != 0)
+		{
+			cm_lbs_deinit();
+		}
 		
 		/*ret = cm_lbs_get_attr(lbs_platform, &apap_cfg_acqure);
 		if(ret == 0)
@@ -133,33 +154,46 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		char pid[64] = {0};
 		cm_lbs_oneospos_attr_t noeospos_cfg = {0};
 		cm_lbs_oneospos_attr_t noeospos_cfg_acqure = {pid,0};
+		int get_attr_ret = 0;
 
 		// OneOS平台	；CM:LBS:platform:设备pid:请求超时时间(0-60s)time_out:是否启用邻区nearbts_enable
 		
 		// 配置OneOS参数
-		noeospos_cfg.pid = pid;				// 设备pid
+		custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, pid);
+		noeospos_cfg.pid = pid;				// 设备pid，允许为空字符串，回退模组内置PID
 		noeospos_cfg.time_out = 60;			// 请求超时时间(0-60s)
-		noeospos_cfg.nearbts_enable = 0;	// 是否启用邻区
+		noeospos_cfg.nearbts_enable = 1;	// 是否启用邻区
+
+		// OneOS LBS 默认 IPv6 优先解析，当前项目按 IPv4 优先处理更稳
+		cm_async_dns_set_priority(0);
 
 		// LBS初始化
 		ret = cm_lbs_init(lbs_platform, &noeospos_cfg);
 		LBS_printf("cm_lbs_init ret=%d\r\n",ret);
+		if(ret != 0)
+		{
+			return ret;
+		}
 		
 		// 获取平台定位配置信息
-		ret = cm_lbs_get_attr(lbs_platform, &noeospos_cfg_acqure);
-		if(ret == 0)
+		get_attr_ret = cm_lbs_get_attr(lbs_platform, &noeospos_cfg_acqure);
+		if(get_attr_ret == 0)
 		{
 			LBS_printf("noeospos_cfg_acqure timeout=%d\r\n",noeospos_cfg_acqure.time_out);
 			LBS_printf("noeospos_cfg_acqure pid =%s\r\n",noeospos_cfg_acqure.pid);
 		}
 		else
 		{
-			LBS_printf("cm_lbs_get_attr error,ret=%d\r\n",ret);
+			LBS_printf("cm_lbs_get_attr error,ret=%d\r\n",get_attr_ret);
 		}
 
 		// LBS获取位置信息(异步)
 		ret = cm_lbs_location(custom_lbs_cb, NULL);
 		LBS_printf("cm_lbs_location ret=%d\r\n",ret);
+		if(ret != 0)
+		{
+			cm_lbs_deinit();
+		}
 		
 		/*ret = cm_lbs_get_attr(lbs_platform, &noeospos_cfg_acqure);
 		if(ret == 0)
@@ -173,13 +207,25 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		}*/
 	}
 
+	if(ret == 0)
+	{
+		s_lbs_started = 1;
+	}
+
 	return ret;
 }
  
 int custom_lbs_init(void)
 {
+	lbs_location_Update = 0;
+	s_lbs_started = 0;
 	memset(&lbs_location, 0, sizeof(lbs_location));
 	
 	return 0;
+}
+
+int custom_lbs_is_started(void)
+{
+	return s_lbs_started;
 }
 

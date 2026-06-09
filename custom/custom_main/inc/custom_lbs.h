@@ -20,6 +20,7 @@ extern custom_lbs_location_t lbs_location;
 
 int custom_lbs_init(void);
 int custom_lbs_start(cm_lbs_location_platform_e lbs_platform);
+int custom_lbs_is_started(void);
 
 
 #endif

@@ -2,6 +2,7 @@
 #include "custom_track.h"
 #include "custom_system.h"
 #include "custom_led.h"
+#include "custom_lbs.h"
 
 custom_network_data_t	network_state;
 
@@ -84,14 +85,26 @@ void custom_network_event_callback(custom_network_event_e state)
 			break;
 		}		
 		/* 网络激活成功 */
-		case NETWORK_EVENT_PDP_ACTIVED:
-		{
-			network_state.PDPActive = 1;
+                case NETWORK_EVENT_PDP_ACTIVED:
+                {
+                        uint8_t first_active = (network_state.PDPActive != 1);
+                        network_state.PDPActive = 1;
 
-			active_check_times = 0;
-			Network_printf("NETWORK_EVENT_PDP_ACTIVED");
-			break;
-		}
+                        active_check_times = 0;
+                        Network_printf("NETWORK_EVENT_PDP_ACTIVED");
+
+                        if(first_active != 0)
+                        {
+                                // PDP 激活后再触发一次 LBS，请求时 HTTP/DNS 才真正可用
+                                osDelay(ONE_SECONED);
+                                if(custom_lbs_is_started() == 0)
+                                {
+                                        int ret = custom_lbs_start(CM_LBS_PLAT_ONEOSPOS);
+                                        Network_printf("custom_lbs_start ret=%d", ret);
+                                }
+                        }
+                        break;
+                }
 		
 		/* 网络失活，需要重新激活 */
 		case NETWORK_EVENT_PDP_DEACTIVED:
