@@ -4,7 +4,7 @@
     `oldTest = "1.0.0"`  
     `newApp  = "1.0.1"`  
     `newTest = "1.0.0"`  
-2、双击 make_fota_package.bat
+2、双击 make_fota_package.bat  
 3、去 `out\fota_packages\...` 里拿` system_patch.bin`
 
 
