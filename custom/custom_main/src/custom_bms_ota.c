@@ -210,7 +210,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 				}
 				else if(request_sn == (current_sn + 1))			// 发送下一帧
 				{
-					if(bms_ota.file_read_len < bms_ota.firmware_file_size)	// 未发送完成
+					if(bms_ota.file_read_len < (uint32_t)bms_ota.firmware_file_size)	// 未发送完成
 					{
 						if(cm_fs_seek(bms_ota.file_data_fd, bms_ota.file_read_len, CM_FS_SEEK_SET) != 0)
 						{
@@ -238,7 +238,6 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 					else
 					{
 						custom_bms_ota_sendFinishCmd();
-						
 						bms_ota.upgrade_retry = 0;
 						custom_bms_ota_setState(BMS_OTA_STATE_Finish);
 					}
@@ -266,6 +265,10 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 // 获取bms固件信息
 int custom_bms_ota_getFirmwareInfo(void)
 {
+	char firmware_url[256] = {0};
+	char firmware_md5[33] = {0};
+	char actual_md5[33] = {0};
+
 	// 文件存在
 	if(cm_fs_exist(BMS_FOTA_FILE_SAVE_DIR) == false)	
 	{
@@ -296,7 +299,7 @@ int custom_bms_ota_getFirmwareInfo(void)
 		cm_free(bms_ota.frame);
 		return -5;
 	}
-	bms_ota.info = cm_malloc(bms_ota.firmware_info_size);
+	bms_ota.info = cm_malloc(bms_ota.firmware_info_size + 1);
 	if(bms_ota.info == NULL)
 	{
 		cm_free(bms_ota.frame);
@@ -346,10 +349,11 @@ int custom_bms_ota_getFirmwareInfo(void)
 		cm_fs_close(bms_ota.file_info_fd);
 		return -9;
 	}
+	bms_ota.info[bms_ota.firmware_info_size] = 0;
 
-	// 分析参数（格式：,固件大小,固件版本,固件URL,)
+	// 分析参数（格式：,固件大小,固件版本,固件URL,固件MD5,)
 	int firmware_size = 0;
-	if(sscanf(bms_ota.info, ",%d,%[^,],", &firmware_size, bms_ota.firmware_version) != 2)
+	if(sscanf(bms_ota.info, ",%d,%[^,],%255[^,],%32[^,],", &firmware_size, bms_ota.firmware_version, firmware_url, firmware_md5) != 4)
 	{
 		cm_free(bms_ota.frame);
 		cm_free(bms_ota.data);
@@ -359,6 +363,18 @@ int custom_bms_ota_getFirmwareInfo(void)
 		cm_fs_close(bms_ota.file_info_fd);
 		return -10;
 	}
+	if(custom_fota_validate_md5_string(firmware_md5) != 0)
+	{
+		BMS_printf("%s: bms_info_file md5 invalid! md5=%s", __func__, firmware_md5);
+		cm_free(bms_ota.frame);
+		cm_free(bms_ota.data);
+		cm_free(bms_ota.info);
+		cm_free(bms_ota.firmware_version);
+		cm_fs_close(bms_ota.file_data_fd);
+		cm_fs_close(bms_ota.file_info_fd);
+		return -11;
+	}
+	custom_fota_md5_to_lower(firmware_md5);
 	if(firmware_size != bms_ota.firmware_file_size)		// 文件不完整
 	{
 		cm_free(bms_ota.frame);
@@ -367,7 +383,29 @@ int custom_bms_ota_getFirmwareInfo(void)
 		cm_free(bms_ota.firmware_version);
 		cm_fs_close(bms_ota.file_data_fd);
 		cm_fs_close(bms_ota.file_info_fd);
-		return -11;
+		return -12;
+	}
+	if(custom_fota_calc_file_md5(BMS_FOTA_FILE_SAVE_DIR, actual_md5) != 0)
+	{
+		BMS_printf("%s: calc bms file md5 failed!", __func__);
+		cm_free(bms_ota.frame);
+		cm_free(bms_ota.data);
+		cm_free(bms_ota.info);
+		cm_free(bms_ota.firmware_version);
+		cm_fs_close(bms_ota.file_data_fd);
+		cm_fs_close(bms_ota.file_info_fd);
+		return -13;
+	}
+	if(strcmp(firmware_md5, actual_md5) != 0)
+	{
+		BMS_printf("%s: bms file md5 mismatch! expected=%s actual=%s", __func__, firmware_md5, actual_md5);
+		cm_free(bms_ota.frame);
+		cm_free(bms_ota.data);
+		cm_free(bms_ota.info);
+		cm_free(bms_ota.firmware_version);
+		cm_fs_close(bms_ota.file_data_fd);
+		cm_fs_close(bms_ota.file_info_fd);
+		return -14;
 	}
 	cm_free(bms_ota.info);
 	cm_fs_close(bms_ota.file_info_fd);
@@ -379,12 +417,12 @@ int custom_bms_ota_getFirmwareInfo(void)
 		cm_free(bms_ota.data);
 		cm_free(bms_ota.firmware_version);
 		cm_fs_close(bms_ota.file_data_fd);
-		return -12;
+		return -15;
 	}
 	
 	//bms_ota.firmware_version_i = (version_hi << 16) + (version_mid << 8) + version_low;
 
-	BMS_printf("%s ok.firmware_file_size=%d,firmware_version=%s", __func__, bms_ota.firmware_file_size, bms_ota.firmware_version);
+	BMS_printf("%s ok.firmware_file_size=%d,firmware_version=%s,md5=%s", __func__, bms_ota.firmware_file_size, bms_ota.firmware_version, actual_md5);
 
 	return 0;
 }
@@ -392,6 +430,8 @@ int custom_bms_ota_getFirmwareInfo(void)
 // 启动bms升级
 int custom_bms_ota_start(uint8_t save_mode, char *file, uint32_t file_size)
 {
+	(void)file;
+	(void)file_size;
 	BMS_printf("%s: save_mode=%s,file_size=%d", __func__, (save_mode==FOTA_SAVE_MEM)? "mem":"fs", file_size);
 
 	if(save_mode == FOTA_SAVE_FS)							// 文件系统：file=文件名 file_size=0
@@ -417,6 +457,7 @@ int custom_bms_ota_start(uint8_t save_mode, char *file, uint32_t file_size)
 
 int custom_bms_ota_finish(int result)
 {
+	(void)result;
 	// 释放内存
 	if(bms_ota.frame != NULL)
 	{
@@ -462,6 +503,7 @@ int custom_bms_ota_finish(int result)
 
 void custom_bms_ota_task(void *p)
 {
+	(void)p;
 	cm_tm_t dt;
 	int value;
 	

@@ -4,10 +4,231 @@
 #include "custom_track.h"
 #include "custom_bms_ota.h"
 #include "custom_global.h"
+#include "../../../third-party/LinkSDK/components/ota/ota_md5.h"
 
 #define FOTA_OTA_WRITE_CHUNK_SIZE 1024
+#define FOTA_MD5_READ_CHUNK_SIZE 2048
 
 custom_fota_t	fota;
+
+static const char *custom_fota_get_module_name(uint8_t module)
+{
+	return (module == FOTA_MODULE_BMS) ? "BMS" : "LTE";
+}
+
+static int custom_fota_is_hex_char(char c)
+{
+	return ((c >= '0' && c <= '9') ||
+		(c >= 'a' && c <= 'f') ||
+		(c >= 'A' && c <= 'F'));
+}
+
+static void custom_fota_digest_to_hex(const unsigned char digest[16], char out_md5[33])
+{
+	static const char hex_chars[] = "0123456789abcdef";
+	uint32_t i = 0;
+
+	for(i = 0; i < 16; ++i)
+	{
+		out_md5[i * 2] = hex_chars[(digest[i] >> 4) & 0x0F];
+		out_md5[i * 2 + 1] = hex_chars[digest[i] & 0x0F];
+	}
+	out_md5[32] = 0;
+}
+
+int custom_fota_validate_md5_string(const char *md5)
+{
+	uint32_t i = 0;
+
+	if(md5 == NULL)
+	{
+		return -1;
+	}
+
+	if(strlen(md5) != 32)
+	{
+		return -2;
+	}
+
+	for(i = 0; i < 32; ++i)
+	{
+		if(custom_fota_is_hex_char(md5[i]) == 0)
+		{
+			return -3;
+		}
+	}
+
+	return 0;
+}
+
+void custom_fota_md5_to_lower(char *md5)
+{
+	uint32_t i = 0;
+
+	if(md5 == NULL)
+	{
+		return;
+	}
+
+	for(i = 0; md5[i] != 0; ++i)
+	{
+		if(md5[i] >= 'A' && md5[i] <= 'F')
+		{
+			md5[i] = (char)(md5[i] - 'A' + 'a');
+		}
+	}
+}
+
+int custom_fota_calc_memory_md5(const uint8_t *data, uint32_t len, char out_md5[33])
+{
+	utils_md5_context_t ctx;
+	unsigned char digest[16] = {0};
+
+	if(data == NULL || out_md5 == NULL || len == 0)
+	{
+		return -1;
+	}
+
+	utils_md5_init(&ctx);
+	utils_md5_starts(&ctx);
+	if(utils_md5_update(&ctx, data, len) != 0)
+	{
+		utils_md5_free(&ctx);
+		return -2;
+	}
+	if(utils_md5_finish(&ctx, digest) != 0)
+	{
+		utils_md5_free(&ctx);
+		return -3;
+	}
+	utils_md5_free(&ctx);
+	custom_fota_digest_to_hex(digest, out_md5);
+
+	return 0;
+}
+
+int custom_fota_calc_file_md5(const char *path, char out_md5[33])
+{
+	utils_md5_context_t ctx;
+	unsigned char digest[16] = {0};
+	uint8_t buffer[FOTA_MD5_READ_CHUNK_SIZE] = {0};
+	int32_t fd = -1;
+	int32_t read_len = 0;
+
+	if(path == NULL || out_md5 == NULL)
+	{
+		return -1;
+	}
+
+	fd = cm_fs_open(path, CM_FS_RB);
+	if(fd < 0)
+	{
+		return -2;
+	}
+
+	utils_md5_init(&ctx);
+	utils_md5_starts(&ctx);
+
+	while(1)
+	{
+		read_len = cm_fs_read(fd, buffer, sizeof(buffer));
+		if(read_len < 0)
+		{
+			cm_fs_close(fd);
+			utils_md5_free(&ctx);
+			return -3;
+		}
+		if(read_len == 0)
+		{
+			break;
+		}
+		if(utils_md5_update(&ctx, buffer, (uint32_t)read_len) != 0)
+		{
+			cm_fs_close(fd);
+			utils_md5_free(&ctx);
+			return -4;
+		}
+		if(read_len < (int32_t)sizeof(buffer))
+		{
+			break;
+		}
+	}
+
+	if(utils_md5_finish(&ctx, digest) != 0)
+	{
+		cm_fs_close(fd);
+		utils_md5_free(&ctx);
+		return -5;
+	}
+
+	cm_fs_close(fd);
+	utils_md5_free(&ctx);
+	custom_fota_digest_to_hex(digest, out_md5);
+
+	return 0;
+}
+
+int custom_fota_verify_package(custom_fota_t *fota_info)
+{
+	char expected_md5[33] = {0};
+	char actual_md5[33] = {0};
+	const char *module_name = NULL;
+	int ret = 0;
+
+	if(fota_info == NULL)
+	{
+		return -1;
+	}
+
+	module_name = custom_fota_get_module_name(fota_info->modules);
+	ret = custom_fota_validate_md5_string(fota_info->md5);
+	if(ret != 0)
+	{
+		FOTA_printf("OTA verify failed, module=%s, reason=invalid md5 format, md5=%s", module_name, fota_info->md5);
+		return -2;
+	}
+
+	if(fota_info->actual_filesize != fota_info->filesize)
+	{
+		FOTA_printf("OTA verify failed, module=%s, reason=size mismatch, expected_size=%d, actual_size=%d, expected_md5=%s",
+			module_name, fota_info->filesize, fota_info->actual_filesize, fota_info->md5);
+		return -3;
+	}
+
+	strcpy(expected_md5, fota_info->md5);
+	custom_fota_md5_to_lower(expected_md5);
+
+	if(fota_info->save_mode == FOTA_SAVE_MEM)
+	{
+		ret = custom_fota_calc_memory_md5((const uint8_t *)fota_info->file, fota_info->actual_filesize, actual_md5);
+	}
+	else if(fota_info->save_mode == FOTA_SAVE_FS)
+	{
+		ret = custom_fota_calc_file_md5(fota_info->file, actual_md5);
+	}
+	else
+	{
+		ret = -4;
+	}
+
+	if(ret != 0)
+	{
+		FOTA_printf("OTA verify failed, module=%s, reason=md5 calc error, expected_size=%d, actual_size=%d, expected_md5=%s",
+			module_name, fota_info->filesize, fota_info->actual_filesize, expected_md5);
+		return -5;
+	}
+
+	if(strcmp(expected_md5, actual_md5) != 0)
+	{
+		FOTA_printf("OTA verify failed, module=%s, reason=md5 mismatch, expected_size=%d, actual_size=%d, expected_md5=%s, actual_md5=%s",
+			module_name, fota_info->filesize, fota_info->actual_filesize, expected_md5, actual_md5);
+		return -6;
+	}
+
+	FOTA_printf("OTA verify ok, module=%s, size=%d, md5=%s", module_name, fota_info->actual_filesize, actual_md5);
+
+	return 0;
+}
 
 // 传入HTTP链接，解析出主机地址和路径
 // 返回：0:合法;  -1:非法,存在格式错误;  -2:host_size或path_size过小
@@ -296,7 +517,10 @@ EXIT:
 	
 	if(http_ret < 0)
 	{
-		memset(data, 0, datasize);
+		if(data != NULL && datasize > 0)
+		{
+			memset(data, 0, datasize);
+		}
 		*datalen = 0;
 	}
 	
@@ -308,12 +532,12 @@ int custom_fota_httpfile_download(void)
 	uint32_t datasize = 0;
 	
 	// 获取升级文件大小
-	if(0 != custom_fota_httpfile_get_partial(fota.url, NULL, 0, 0, 0, 0, &fota.filesize, &datasize)) 
+	if(0 != custom_fota_httpfile_get_partial(fota.url, NULL, 0, 0, 0, 0, &fota.actual_filesize, &datasize)) 
 	{
 		FOTA_printf("%s: getfile length error!", __func__);
 		return -1;
 	}
-	FOTA_printf("%s: filesize=%d",__func__ , fota.filesize);
+	FOTA_printf("%s: expected_size=%d,actual_size=%d",__func__ , fota.filesize, fota.actual_filesize);
 
 	// 获取文件系统与heap空间大小
 	cm_fs_getinfo(&fs_system_info);
@@ -323,24 +547,26 @@ int custom_fota_httpfile_download(void)
 	// 下载到内存
 	if(fota.save_mode == FOTA_SAVE_MEM)
 	{
-		if((fota.filesize + FOTA_RESERVED_SPACE_SIZE) < heap_stats.free)			// 存放：内存，并预留部分空间
+		if((fota.actual_filesize + FOTA_RESERVED_SPACE_SIZE) < heap_stats.free)			// 存放：内存，并预留部分空间
 		{
 			// 获取内存
-			fota.file = cm_malloc(fota.filesize);									// 申请内存：存放文件
+			fota.file = cm_malloc(fota.actual_filesize);									// 申请内存：存放文件
 			if(fota.file == NULL)
 			{
 				FOTA_printf("%s: cm_malloc failed!",__func__);
 				return -2;
 			}
 
-			int ret = custom_fota_httpfile_get_partial(fota.url, (uint8_t *)fota.file, fota.filesize, 0, 0, 1, &fota.filesize, &datasize);	// 下载整个文件到内存
+			int ret = custom_fota_httpfile_get_partial(fota.url, (uint8_t *)fota.file, fota.actual_filesize, 0, 0, 1, &fota.actual_filesize, &datasize);	// 下载整个文件到内存
 			if(ret != 0)
 			{
 				FOTA_printf("%s: custom_fota_httpfile_get_partial() error!", __func__);
 				cm_free(fota.file);
+				fota.file = NULL;
 				return -3;
 			}
-			FOTA_printf("%s: finish! datasize=%d,filesize=%d", __func__, datasize, fota.filesize);	
+			fota.actual_filesize = datasize;
+			FOTA_printf("%s: finish! datasize=%d,actual_size=%d", __func__, datasize, fota.actual_filesize);	
 			//cm_free(fota.file);													// 内存不释放
 		}
 		else
@@ -352,12 +578,12 @@ int custom_fota_httpfile_download(void)
 	// 下载到文件系统
 	else if(fota.save_mode == FOTA_SAVE_FS)
 	{
-		if((fota.filesize + FOTA_RESERVED_SPACE_SIZE) < fs_system_info.free_size)	// 存放：文件系统，并预留部分空间
+		if((fota.actual_filesize + FOTA_RESERVED_SPACE_SIZE) < fs_system_info.free_size)	// 存放：文件系统，并预留部分空间
 		{
 			// 获取内存
 			if(fota.modules == FOTA_MODULE_LTE)
 			{
-				fota.file = cm_malloc(strlen(LTE_FOTA_FILE_SAVE_DIR));				// 申请内存：存放文件名
+				fota.file = cm_malloc(strlen(LTE_FOTA_FILE_SAVE_DIR) + 1);				// 申请内存：存放文件名
 				if(fota.file == NULL)
 				{
 					FOTA_printf("%s: cm_malloc failed!",__func__);
@@ -367,7 +593,7 @@ int custom_fota_httpfile_download(void)
 			}
 			else
 			{
-				fota.file = cm_malloc(strlen(BMS_FOTA_FILE_SAVE_DIR));	
+				fota.file = cm_malloc(strlen(BMS_FOTA_FILE_SAVE_DIR) + 1);	
 				if(fota.file == NULL)
 				{
 					FOTA_printf("%s: cm_malloc failed!",__func__);
@@ -377,13 +603,13 @@ int custom_fota_httpfile_download(void)
 			}
 
 			// 当前服务端仅支持整包下载，文件系统模式也改为先整包下载到内存再落盘。
-			if((fota.filesize + FOTA_RESERVED_SPACE_SIZE) >= heap_stats.free)
+			if((fota.actual_filesize + FOTA_RESERVED_SPACE_SIZE) >= heap_stats.free)
 			{
 				FOTA_printf("%s: heap space not enough for full download!",__func__);
 				return -7;
 			}
 
-			uint8_t *data = cm_malloc(fota.filesize);
+			uint8_t *data = cm_malloc(fota.actual_filesize);
 			if(data == NULL)
 			{
 				FOTA_printf("%s: cm_malloc failed!",__func__);
@@ -405,7 +631,7 @@ int custom_fota_httpfile_download(void)
 				return -8;
 			}  
 
-			int ret = custom_fota_httpfile_get_partial(fota.url, data, fota.filesize, 0, 0, 1, &fota.filesize, &datasize);
+			int ret = custom_fota_httpfile_get_partial(fota.url, data, fota.actual_filesize, 0, 0, 1, &fota.actual_filesize, &datasize);
 			if(ret != 0)
 			{
 				cm_free(data);
@@ -416,7 +642,7 @@ int custom_fota_httpfile_download(void)
 
 			// 下载成功,写入文件
 			int32_t f_wlen = cm_fs_write(fd, data, datasize);
-			if(f_wlen != datasize)													// 写入失败
+			if(f_wlen != (int32_t)datasize)													// 写入失败
 			{
 				cm_free(data);
 				cm_fs_close(fd);
@@ -426,7 +652,8 @@ int custom_fota_httpfile_download(void)
 
 			cm_free(data);
 			cm_fs_close(fd);
-			FOTA_printf("%s: finish! datasize=%d,filesize=%d", __func__, datasize, fota.filesize);
+			fota.actual_filesize = cm_fs_filesize(fota.file);
+			FOTA_printf("%s: finish! datasize=%d,actual_size=%d", __func__, datasize, fota.actual_filesize);
 			return 0;
 		}
 		else
@@ -535,22 +762,29 @@ int custom_fota_lte_ota_start(uint8_t save_mode, char *file, uint32_t file_size)
 	return 0;
 }
 
-// 启动FOTA升级线程(升级指定模块，升级文件URL，升级文件保存位置，是否立即升级)
-int custom_fota_start(uint8_t fota_module, char *fota_url, uint8_t save_mode, uint8_t is_update)
+// 启动FOTA升级线程(升级指定模块，升级文件URL，期望文件大小，期望MD5，升级文件保存位置，是否立即升级)
+int custom_fota_start(uint8_t fota_module, char *fota_url, uint32_t expected_size, const char *expected_md5, uint8_t save_mode, uint8_t is_update)
 {
-	if((fota_module < FOTA_MODULE_MAX) && (strlen(fota_url) > 0))
+	if((fota_module < FOTA_MODULE_MAX) &&
+		(fota_url != NULL) &&
+		(strlen(fota_url) > 0) &&
+		(expected_size > 0) &&
+		(custom_fota_validate_md5_string(expected_md5) == 0))
 	{
 		memset(&fota, 0, sizeof(fota));
 		fota.modules = fota_module;
 		fota.save_mode = save_mode;
 		fota.is_update = is_update;
+		fota.filesize = expected_size;
+		strncpy(fota.md5, expected_md5, sizeof(fota.md5) - 1);
+		custom_fota_md5_to_lower(fota.md5);
 		fota.url = cm_malloc(strlen(fota_url)+1);
 		
 		if(fota.url != NULL)
 		{
 			strcpy(fota.url, fota_url);
 			fota.state = FOTA_STATE_UPGRADE;
-			FOTA_printf("%s: module=%d,url=%s", __func__, fota.modules, fota.url);
+			FOTA_printf("%s: module=%d,url=%s,expected_size=%d,md5=%s", __func__, fota.modules, fota.url, fota.filesize, fota.md5);
 			return 0;
 		}
 	}	
@@ -564,11 +798,15 @@ int custom_fota_finish(void)
 	if(fota.url != NULL)
 	{
 		cm_free(fota.url);
+		fota.url = NULL;
 	}	
 	if(fota.file != NULL)
 	{
 		cm_free(fota.file);
+		fota.file = NULL;
 	}
+	fota.actual_filesize = 0;
+	memset(fota.md5, 0, sizeof(fota.md5));
 	FOTA_printf("%s!", __func__);
 
 	return 0;
@@ -576,6 +814,7 @@ int custom_fota_finish(void)
 
 static void custom_fota_task(void *argument)
 {
+	(void)argument;
 	memset(&fota, 0, sizeof(fota));
 
 	while (1)
@@ -589,9 +828,11 @@ static void custom_fota_task(void *argument)
 			if(custom_fota_httpfile_download() == 0)
 			{
 				FOTA_printf("custom_fota_httpfile_download() success.");
-
-				// 启动升级流程
-				if(fota.modules == FOTA_MODULE_LTE) 			// LTE模块
+				if(custom_fota_verify_package(&fota) != 0)
+				{
+					FOTA_printf("custom_fota_verify_package() failed.");
+				}
+				else if(fota.modules == FOTA_MODULE_LTE) 			// LTE模块
 				{
 					FOTA_printf("FOTA_MODULE_LTE: UPDATE-%s", (fota.is_update == FOTA_UPDATE_YES)? "YES":"NO");	
 
@@ -599,7 +840,7 @@ static void custom_fota_task(void *argument)
 					{
 						int ret = -1;
 
-						ret = custom_fota_lte_ota_start(fota.save_mode, fota.file, fota.filesize);
+						ret = custom_fota_lte_ota_start(fota.save_mode, fota.file, fota.actual_filesize);
 						if(ret == 0)
 						{
 							FOTA_printf("custom_fota_lte_ota_start() success, waiting reboot...");
@@ -615,12 +856,11 @@ static void custom_fota_task(void *argument)
 				}
 				else if(fota.modules == FOTA_MODULE_BMS)		// BMS模块
 				{
-					
 					FOTA_printf("FOTA_MODULE_BMS: UPDATE-%s", (fota.is_update == FOTA_UPDATE_YES)? "YES":"NO");
 
 					if(fota.is_update == FOTA_UPDATE_YES)
 					{
-						custom_bms_ota_start(fota.save_mode, fota.file, fota.filesize);
+						custom_bms_ota_start(fota.save_mode, fota.file, fota.actual_filesize);
 					}
 				}
 			}
