@@ -17,6 +17,7 @@
 static BMS_SPS bms_sps;
 
 
+/* 按自定义协议封装一帧数据并发送到 BMS。 */
 int custom_bms_send_frame(uint8_t cid, uint8_t tid, uint8_t *buf, uint16_t len)
 {
 	if(bms_sps.sbuf != NULL)
@@ -34,14 +35,14 @@ int custom_bms_send_frame(uint8_t cid, uint8_t tid, uint8_t *buf, uint16_t len)
 			memcpy(&bms_sps.sbuf[pos], buf, len);
 			pos += len;
 		}
-		
+
 		uint8_t check = calc_xor(&bms_sps.sbuf[1], pos - 1);
 		bms_sps.sbuf[pos++] = check;
 		bms_sps.sbuf[pos++] = PRO_TAIL;
-		
+
 		BMS_printHex("bms send:", bms_sps.sbuf, pos);
 		custom_bms_send(bms_sps.sbuf, pos);
-		
+
 		return 0;
 	}
 	else
@@ -57,7 +58,7 @@ int custom_bms_send_lte_module_info(uint8_t tid, char *imei, char *iccid, char *
 	uint16_t pos = 0;
 
 	pos = common_sprintf(buf, "%s,%s,%s,%s,%s", imei, iccid, bt_mac, lte_sdk_version, lte_app_version);
-	
+
 	BMS_printRaw("custom_bms_send_lte_module_info:", buf, pos);
 	custom_bms_send_frame(PRO_CMD08_MODULE_BASE_ACK, tid, buf, pos);
 
@@ -103,7 +104,7 @@ int custom_bms_send_lte_module_state(uint8_t tid,
 	// LBS经度,LBS纬度,GPS经度,GPS纬度,GPS可见卫星数,GPS使用卫星数,GPS海拔高度,GPS速度
 	len = common_sprintf(&buf[pos], ",%f,%f,%f,%f,%d,%d,%f,%f,", lbs_longitude, lbs_latitude,	gnss_longitude, gnss_latitude, visible_satellites, use_satellites, altitude, speed);
 	pos += len;
-	
+
 	BMS_printRaw("custom_bms_send_lte_module_state:", buf, pos);
 	custom_bms_send_frame(PRO_CMD09_MODULE_STATE_ACK, tid, buf, pos);
 
@@ -124,6 +125,7 @@ int custom_bms_send_fault_report_ack(uint8_t tid, uint8_t result)
 	return 0;
 }
 
+/* 逐字节接收并解析 BMS 串口协议帧。 */
 int custom_bms_OnChar(uint8_t ch)
 {
 	switch(bms_sps.state)
@@ -175,7 +177,7 @@ int custom_bms_OnChar(uint8_t ch)
 				BMS_printf("%s: drop frame, data_len overflow. cid=%02X tid=%d len=%d", __func__, bms_sps.cid, bms_sps.tid, bms_sps.data_len);
 				return TPTC_R_FALSE;
 			}
-			
+
 			if((bms_sps.data_len > 0) && (bms_sps.data_body != NULL))
 			{				
 				bms_sps.state = PRO_S_MSGDATA;
@@ -229,10 +231,11 @@ int custom_bms_OnChar(uint8_t ch)
 		default:
 			break;
 	}
-	
+
 	return TPTC_R_CONTINUE;
 }
 
+/* 处理已经解析完成的 BMS 协议帧。 */
 int custom_bms_OnFrame(void)
 {
 	int w_len=0;
@@ -247,14 +250,14 @@ int custom_bms_OnFrame(void)
 		// 登录包上报
 		case PRO_CMD83_LOGIN_ACK:						// 登录或查询上报(BMS->LTE->云端)
 		{
-			onenet_forward = 1;
-//小程序不支持			bluetooth_forward = 1;
+			   onenet_forward = 1;
+//小程序不支持	bluetooth_forward = 1;
 			break;
 		}
 		case PRO_CMD93_LOGIN_ACK:						// 登录或查询上报2.0(BMS->LTE->云端)
 		{
-			onenet_forward = 1;
-//小程序不支持			bluetooth_forward = 1;		
+			  onenet_forward = 1;
+//小程序不支持 bluetooth_forward = 1;		
 			break;
 		}
 		// 电池信息上报
@@ -262,7 +265,6 @@ int custom_bms_OnFrame(void)
 		{		
 			onenet_forward = 1;
 			bluetooth_forward = 1;
-
 			//-xxx			// 解析指令获取bms相关的参数
 			break;
 		}
@@ -350,7 +352,7 @@ int custom_bms_OnFrame(void)
 			{
 				lte_module_state |= 0x40; 
 			}
-			
+
 			// 应答
 			custom_get_now_datetime(&datetime);
 			custom_bms_send_lte_module_state(0, datetime, 
@@ -389,7 +391,7 @@ int custom_bms_OnFrame(void)
 		default:		
 			break;
 	}
-	
+
 	// 转发到蓝牙(不加密)
 	if(bluetooth_forward == 1)
 	{
@@ -398,7 +400,7 @@ int custom_bms_OnFrame(void)
 			/*w_len = make_base64(1, bms_sps.frame, bms_sps.frame_len, bms_sps.base64_buffer, PRO_BUFFER_LENGTH);
 			bms_sps.base64_buffer[w_len] = 0;
 			//BMS_printf("bluetooth-makebase64:%s", bms_sps.base64_buffer);
-			
+
 			if(w_len > 0)
 			{				
 				custom_bluetooth_send(bms_sps.base64_buffer, w_len);
@@ -407,7 +409,7 @@ int custom_bms_OnFrame(void)
 			custom_bluetooth_send(bms_sps.frame, bms_sps.frame_len);
 		}
 	}
-	
+
 	// 转发到OneNet(加密)
 	if(onenet_forward == 1)
 	{
@@ -416,7 +418,7 @@ int custom_bms_OnFrame(void)
 			w_len = make_base64(0, bms_sps.frame, bms_sps.frame_len, bms_sps.base64_buffer, PRO_BUFFER_LENGTH);
 			bms_sps.base64_buffer[w_len] = 0;			
 			//BMS_printf("onenet-makebase64:%s", bms_sps.base64_buffer);
-				
+
 			if(w_len > 0)
 			{
 				char *identification[2];
@@ -430,10 +432,11 @@ int custom_bms_OnFrame(void)
 		}
 
 	}
-	
+
 	return 0;
 }
 
+/* 处理 BMS 帧解析结束事件。 */
 int custom_bms_OnFinish(void)
 {
 	bms_sps.state = PRO_S_HEAD;
@@ -453,28 +456,30 @@ int custom_bms_OnBlock(uint8_t *buf,uint32_t len)
 
 		return 1;
 	}
-	
+
 	return 0;
 }
 
+/* BMS 后台任务入口。 */
 void custom_bms_task(void *p)
 {
 	//int tid = 0;
 	//int mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen, const unsigned char *src, size_t slen );
-	
+
 	while(1)
 	{
 		//BMS_printf("custom_bms_task is running...");
 		//custom_bms_SendFrame(1, tid++, NULL, 0);
-		
+
 		osDelay(ONE_SECONED);	// 1秒
 	}
 }
 
+/* 初始化 BMS 通信缓冲区、串口和任务。 */
 int custom_bms_init(void)
 {
 	memset(&bms_sps, 0, sizeof(bms_sps));
-	
+
 	bms_sps.data_body = cm_malloc(PRO_BUFFER_LENGTH);
 	bms_sps.frame = cm_malloc(PRO_BUFFER_LENGTH);
 	bms_sps.base64_buffer = cm_malloc(PRO_BUFFER_LENGTH);
@@ -487,7 +492,7 @@ int custom_bms_init(void)
 	app_task_attr.stack_size = 1024 * 4;
 	app_task_attr.priority = osPriorityNormal;
 	osThreadNew((osThreadFunc_t)custom_bms_task, 0, &app_task_attr);
-	
+
 	return 0;
 }
 

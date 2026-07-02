@@ -20,6 +20,7 @@
 #include "custom_bms_ota.h"
 #include "custom_cloud_lte.h"
 
+/* OpenCPU 应用入口，按顺序初始化各业务模块。 */
 int cm_opencpu_entry(void *param)
 {
 	(void)param;
@@ -27,10 +28,10 @@ int cm_opencpu_entry(void *param)
 	custom_uart_init();
 	custom_usb_init();
 	custom_track_init();
-	
+
 	osDelay(ONE_SECONED);		// 等待1秒再打印，因为使用USB打印，操作需要时间
 	SYSTEM_printf("######################cm_opencpu_entry########################");
-	
+
 	custom_profile_init();
 	custom_lbs_init();
 	custom_network_init();
@@ -48,7 +49,7 @@ int cm_opencpu_entry(void *param)
 	custom_bms_ota_init();
 	custom_cloud_lte_init();
 	custom_fota_init();
-	
+
 	return 0;
 }
 

@@ -4,6 +4,8 @@
 #include "custom_track.h"
 #include "custom_bms_ota.h"
 #include "custom_global.h"
+#include "custom_cloud_lte.h"
+#include "custom_protocol.h"
 #include "../../../third-party/LinkSDK/components/ota/ota_md5.h"
 
 #define FOTA_OTA_WRITE_CHUNK_SIZE 1024
@@ -11,11 +13,23 @@
 
 custom_fota_t	fota;
 
+/* 根据 OTA 模块编号返回模块名称字符串。 */
 static const char *custom_fota_get_module_name(uint8_t module)
 {
 	return (module == FOTA_MODULE_BMS) ? "BMS" : "LTE";
 }
 
+// LTE OTA 下载线程中的阶段回包，只有平台 0x60 入口启动的任务才会发送。
+static void custom_fota_send_lte_reply(uint8_t result)
+{
+	if((fota.modules == FOTA_MODULE_LTE) && (fota.cloud_reply_enabled != 0))
+	{
+		// LTE OTA 阶段回包固定走 0x60，子命令固定为 0x01。
+		custom_cloud_lte_sendResultFrame(PRO_CMD60_MODULE, fota.cloud_tid, CLOUD_LTE_FOTA, result);
+	}
+}
+
+/* 判断字符是否为十六进制字符。 */
 static int custom_fota_is_hex_char(char c)
 {
 	return ((c >= '0' && c <= '9') ||
@@ -23,6 +37,7 @@ static int custom_fota_is_hex_char(char c)
 		(c >= 'A' && c <= 'F'));
 }
 
+/* 将 16 字节 MD5 摘要转换为 32 字符十六进制字符串。 */
 static void custom_fota_digest_to_hex(const unsigned char digest[16], char out_md5[33])
 {
 	static const char hex_chars[] = "0123456789abcdef";
@@ -36,6 +51,7 @@ static void custom_fota_digest_to_hex(const unsigned char digest[16], char out_m
 	out_md5[32] = 0;
 }
 
+/* 校验 OTA MD5 字符串是否合法，要求 32 位十六进制字符。 */
 int custom_fota_validate_md5_string(const char *md5)
 {
 	uint32_t i = 0;
@@ -61,6 +77,7 @@ int custom_fota_validate_md5_string(const char *md5)
 	return 0;
 }
 
+/* 将 MD5 字符串中的大写十六进制字符转换为小写。 */
 void custom_fota_md5_to_lower(char *md5)
 {
 	uint32_t i = 0;
@@ -79,6 +96,7 @@ void custom_fota_md5_to_lower(char *md5)
 	}
 }
 
+/* 计算内存数据的 MD5 值并输出十六进制字符串。 */
 int custom_fota_calc_memory_md5(const uint8_t *data, uint32_t len, char out_md5[33])
 {
 	utils_md5_context_t ctx;
@@ -107,6 +125,7 @@ int custom_fota_calc_memory_md5(const uint8_t *data, uint32_t len, char out_md5[
 	return 0;
 }
 
+/* 按分块读取文件并计算 MD5 值。 */
 int custom_fota_calc_file_md5(const char *path, char out_md5[33])
 {
 	utils_md5_context_t ctx;
@@ -168,6 +187,23 @@ int custom_fota_calc_file_md5(const char *path, char out_md5[33])
 	return 0;
 }
 
+/** @brief 校验 OTA 升级包是否完整、正确 
+ * 该函数通常在 OTA 包下载完成后、真正执行升级前调用。
+ * 主要校验内容： 
+ * 1. fota_info 参数是否有效 
+ * 2. 平台下发的 MD5 字符串格式是否合法 
+ * 3. 实际下载文件大小是否等于平台下发的文件大小 
+ * 4. 根据保存方式计算实际 OTA 包 MD5 
+ * 5. 比较平台下发 MD5 和实际计算 MD5 是否一致
+ * 
+ *  @param fota_info OTA 任务上下文，包含模块类型、文件路径/内存地址、文件大小、MD5 等信息 * 
+ * * @return 0 校验成功 
+ * * @return -1 fota_info 为空 
+ * * @return -2 平台下发的 MD5 格式非法
+ * * @return -3 文件大小不匹配
+ * * @return -5 MD5 计算失败，或 save_mode 非法 
+ * * @return -6 MD5 不匹配
+ * */
 int custom_fota_verify_package(custom_fota_t *fota_info)
 {
 	char expected_md5[33] = {0};
@@ -180,8 +216,8 @@ int custom_fota_verify_package(custom_fota_t *fota_info)
 		return -1;
 	}
 
-	module_name = custom_fota_get_module_name(fota_info->modules);
-	ret = custom_fota_validate_md5_string(fota_info->md5);
+	module_name = custom_fota_get_module_name(fota_info->modules);//获取模块名称，主要用于日志 ，不参与实际校验
+	ret = custom_fota_validate_md5_string(fota_info->md5);//校验平台下发的md5，如果 md5 为空、长度不是 32、包含非十六进制字符应该返回失败
 	if(ret != 0)
 	{
 		FOTA_printf("OTA verify failed, module=%s, reason=invalid md5 format, md5=%s", module_name, fota_info->md5);
@@ -196,8 +232,9 @@ int custom_fota_verify_package(custom_fota_t *fota_info)
 	}
 
 	strcpy(expected_md5, fota_info->md5);
-	custom_fota_md5_to_lower(expected_md5);
+	custom_fota_md5_to_lower(expected_md5);//把MD5统一转成小写
 
+	/*根据不同存储方式，进行md5校验或者是存储方式不是这其二*/
 	if(fota_info->save_mode == FOTA_SAVE_MEM)
 	{
 		ret = custom_fota_calc_memory_md5((const uint8_t *)fota_info->file, fota_info->actual_filesize, actual_md5);
@@ -527,6 +564,7 @@ EXIT:
 	return http_ret;
 }
 
+/* 根据保存模式下载 OTA 文件到内存或文件系统。 */
 int custom_fota_httpfile_download(void)
 {
 	uint32_t datasize = 0;
@@ -771,6 +809,15 @@ int custom_fota_start(uint8_t fota_module, char *fota_url, uint32_t expected_siz
 		(expected_size > 0) &&
 		(custom_fota_validate_md5_string(expected_md5) == 0))
 	{
+		if((fota.state != FOTA_STATE_IDLE) ||
+			(fota.url != NULL) ||
+			(fota.file != NULL) ||
+			(fota.md5[0] != '\0'))
+		{
+			FOTA_printf("%s: busy!", __func__);
+			return -1;
+		}
+
 		memset(&fota, 0, sizeof(fota));
 		fota.modules = fota_module;
 		fota.save_mode = save_mode;
@@ -793,6 +840,7 @@ int custom_fota_start(uint8_t fota_module, char *fota_url, uint32_t expected_siz
 	return -1;
 }
 
+/* 结束当前 FOTA 任务并释放运行资源。 */
 int custom_fota_finish(void)
 {
 	if(fota.url != NULL)
@@ -807,11 +855,14 @@ int custom_fota_finish(void)
 	}
 	fota.actual_filesize = 0;
 	memset(fota.md5, 0, sizeof(fota.md5));
+	fota.cloud_tid = 0;
+	fota.cloud_reply_enabled = 0;
 	FOTA_printf("%s!", __func__);
 
 	return 0;
 }
 
+/* FOTA 后台任务，执行下载、校验、升级和状态回包。 */
 static void custom_fota_task(void *argument)
 {
 	(void)argument;
@@ -831,6 +882,8 @@ static void custom_fota_task(void *argument)
 				if(custom_fota_verify_package(&fota) != 0)
 				{
 					FOTA_printf("custom_fota_verify_package() failed.");
+					// 下载完成但大小或 MD5 校验失败。
+					custom_fota_send_lte_reply(CLOUD_LTE_FOTA_RESULT_DOWNLOAD_OR_VERIFY_FAIL);
 				}
 				else if(fota.modules == FOTA_MODULE_LTE) 			// LTE模块
 				{
@@ -840,16 +893,22 @@ static void custom_fota_task(void *argument)
 					{
 						int ret = -1;
 
+						// 整包校验通过，准备进入 LTE OTA 写入流程。
+						custom_fota_send_lte_reply(CLOUD_LTE_FOTA_RESULT_VERIFY_OK);
 						ret = custom_fota_lte_ota_start(fota.save_mode, fota.file, fota.actual_filesize);
 						if(ret == 0)
 						{
 							FOTA_printf("custom_fota_lte_ota_start() success, waiting reboot...");
+							// OTA 执行成功后先回包，再保留原有自动重启流程。
+							custom_fota_send_lte_reply(CLOUD_LTE_FOTA_RESULT_OTA_DONE);
 							osDelay(2000 / 5);
 							FOTA_printf("cm_pm_reboot().");
 							cm_pm_reboot();
 						}
 						else
 						{
+							// OTA 初始化、擦除、写入或 upgrade 任一步失败。
+							custom_fota_send_lte_reply(CLOUD_LTE_FOTA_RESULT_OTA_FAIL);
 							FOTA_printf("custom_fota_lte_ota_start() fail: %d", ret);
 						}
 					}
@@ -867,6 +926,8 @@ static void custom_fota_task(void *argument)
 			else
 			{
 				FOTA_printf("custom_fota_httpfile_download() error.");				
+				// 下载失败，未进入整包校验和 OTA 写入流程。
+				custom_fota_send_lte_reply(CLOUD_LTE_FOTA_RESULT_DOWNLOAD_OR_VERIFY_FAIL);
 			}
 
 			// 升级任务结束
@@ -876,6 +937,7 @@ static void custom_fota_task(void *argument)
 	}
 }
 
+/* 初始化 FOTA 全局状态并创建后台任务。 */
 int custom_fota_init(void)
 {
 	osThreadAttr_t fota_task_attr = {0};

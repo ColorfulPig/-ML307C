@@ -1,4 +1,4 @@
 $oldApp  = "1.0.1"
-$oldTest = "1.0.1"
-$newApp  = "1.0.1"
-$newTest = "1.0.2"
+$oldTest = "1.0.3"
+$newApp  = "1.0.2"
+$newTest = "1.0.3"

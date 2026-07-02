@@ -44,7 +44,7 @@ enum
 {
 	FOTA_MODULE_LTE = 0,		// 通讯模块
 	FOTA_MODULE_BMS,			// BMS模块
-	
+
 	FOTA_MODULE_MAX,
 };
 
@@ -74,15 +74,27 @@ typedef struct
 	uint32_t	filesize;		// OTA 期望文件大小
 	uint32_t	actual_filesize;	// OTA 实际下载文件大小
 	char		md5[33];		// OTA 期望 MD5
+	uint8_t		cloud_tid;				// LTE OTA 平台下发事务号，用于异步阶段回包
+	uint8_t		cloud_reply_enabled;	// 是否启用 LTE OTA 阶段回包
 }custom_fota_t;
 
+extern custom_fota_t fota;
+
+/* 初始化 FOTA 全局状态并创建后台任务。 */
 int custom_fota_init(void);
+/* 创建并启动一次 FOTA 下载升级任务。 */
 int custom_fota_start(uint8_t fota_module, char *fota_url, uint32_t expected_size, const char *expected_md5, uint8_t save_mode, uint8_t is_update);
+/* 结束当前 FOTA 任务并释放运行资源。 */
 int custom_fota_finish(void);
+/* 校验 OTA MD5 字符串是否合法，要求 32 位十六进制字符。 */
 int custom_fota_validate_md5_string(const char *md5);
+/* 将 MD5 字符串中的大写十六进制字符转换为小写。 */
 void custom_fota_md5_to_lower(char *md5);
+/* 计算内存数据的 MD5 值并输出十六进制字符串。 */
 int custom_fota_calc_memory_md5(const uint8_t *data, uint32_t len, char out_md5[33]);
+/* 按分块读取文件并计算 MD5 值。 */
 int custom_fota_calc_file_md5(const char *path, char out_md5[33]);
+/* 校验 OTA 包的期望大小和 MD5 是否与实际下载结果一致。 */
 int custom_fota_verify_package(custom_fota_t *fota);
 
 #endif

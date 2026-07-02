@@ -22,12 +22,13 @@ uint32_t bluetooth_Recv_NoDataCount = 0;		// 接收长时间超时
 #define	BLUETOOTH_RECV_NODATA_WAIT		300		// 秒
 #define	BLUETOOTH_COMMAND_ACK_WAIT		5		// 秒
 
+/* 处理蓝牙串口收到的一整包数据，解析模块状态和透传内容。 */
 int custom_bluetooth_OnBlock(uint8_t *buf,uint32_t len)
 {
 	uint8_t head[3],tail[2];
 	char *pstart,*pend;
 	int dlen;
-	
+
 	if(len > 5)
 	{
 		memcpy(head, buf, 3);
@@ -55,7 +56,7 @@ int custom_bluetooth_OnBlock(uint8_t *buf,uint32_t len)
 					}
 				}
 			}
-			
+
 			// 蓝牙MAC地址："\r\n+MAC:xxxxxx\r\n"
 			pstart = strstr((char *)buf, "\r\n+MAC:");
 			if(pstart != NULL)
@@ -80,7 +81,7 @@ int custom_bluetooth_OnBlock(uint8_t *buf,uint32_t len)
 					}
 				}
 			}
-			
+
 			// 蓝牙连接成功："\r\n+LINK:CONNECTED\r\n"
 			pstart = strstr((char *)buf, "\r\n+LINK:CONNECTED\r\n");
 			if(pstart != NULL)
@@ -109,10 +110,11 @@ int custom_bluetooth_OnBlock(uint8_t *buf,uint32_t len)
 			BlueTooth_printHex("BlueTooth to BMS:", buf, len);
 		}
 	}
-	
+
 	return 0;
 }
 
+/* 向蓝牙串口发送数据。 */
 int custom_bluetooth_send(uint8_t *buf, uint16_t len)
 {
 	custom_uart_send(BLUETOOTH_COMM, buf, len);
@@ -120,13 +122,14 @@ int custom_bluetooth_send(uint8_t *buf, uint16_t len)
 	return 0;
 }
 
+/* 蓝牙后台任务，定时查询蓝牙信息并维护连接状态。 */
 void custom_bluetooth_task(void *p)
 {	
 	int count = 0;
-	
+
 	custom_profile_getString(CONFIG_ITEM_BT_MAC, bluetooth_MAC);
 	//BlueTooth_printf("bluetooth_MAC: %s", bluetooth_MAC);
-		
+
 	while(1)
 	{
 		osDelay(ONE_SECONED);	// 1秒
@@ -187,6 +190,7 @@ void custom_bluetooth_task(void *p)
 	}
 }
 
+/* 初始化蓝牙模块相关任务和运行状态。 */
 int custom_bluetooth_init(void)
 {    
 	// 创建任务

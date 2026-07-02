@@ -26,8 +26,24 @@ enum
 	CLOUD_RESULT_FAIL = 1
 };
 
+enum
+{
+	CLOUD_LTE_FOTA_RESULT_ACCEPTED = 0,				 // 参数解析并成功受理 OTA 任务
+	CLOUD_LTE_FOTA_RESULT_ACCEPT_FAIL = 1,			 // 参数解析或受理失败
+	CLOUD_LTE_FOTA_RESULT_VERIFY_OK = 2,				 // 升级包下载完成且 MD5 校验通过，准备进入 OTA
+	CLOUD_LTE_FOTA_RESULT_DOWNLOAD_OR_VERIFY_FAIL = 3, // 下载失败或整包校验失败
+	CLOUD_LTE_FOTA_RESULT_OTA_DONE = 4,				 // OTA 执行完成
+	CLOUD_LTE_FOTA_RESULT_OTA_FAIL = 5				 // OTA 执行失败
+};
+
+/* 初始化 Cloud LTE 业务处理任务。 */
 int custom_cloud_lte_init(void);
+/* 处理 0x50 LTE 旧指令入口，包括重启、BMS OTA 和查询信息。 */
 int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len);
+// 0x60 命令 ID 专用入口，目前承载 LTE OTA 子命令 0x01。
+int custom_cloud_lte_OnFotaInstruction(uint8_t tid, uint8_t *buf, uint16_t len);
+// LTE 平台结果回包：cid=0x50 或 0x60，data[0]=cmd，data[1]=result。
+int custom_cloud_lte_sendResultFrame(uint8_t cid, uint8_t tid, uint8_t cmd, uint8_t result);
 
 
 #endif

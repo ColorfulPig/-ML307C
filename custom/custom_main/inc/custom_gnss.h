@@ -27,14 +27,16 @@ typedef struct{
     float spkn;                     /** 水平运动速度，单位Knots,默认值为0 */
     uint8_t nsat;                   /** 参与定位的卫星数,默认值为0 */
     uint8_t dtype;                  /** 差分定位标识,默认值为0 *//*不支持*/
-	
+
     uint8_t vsat;                   /** 可视的卫星数,默认值为0 */
 } gnss_location_info_t;
 
 
 extern gnss_location_info_t gnss_location;
 
+/* 初始化 GNSS 相关状态并创建后台任务。 */
 int custom_gnss_init(void);
+/* 打开或关闭 GNSS 定位功能。 */
 int	custom_gnss_enable(uint8_t enable);
 
 #endif

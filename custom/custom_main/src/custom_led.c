@@ -12,16 +12,18 @@
 uint8_t	custom_led_state = 0;
 
 
+/* 设置联网指示灯状态。 */
 int custom_led_setState(uint8_t state)
 {
 	custom_led_state = state;
 	return 0;
 }
 
+/* LED 后台任务，根据连接状态控制闪烁节奏。 */
 void custom_led_task(void *p)
 {
 	custom_led_setState(LED_STATE_IDLE);
-	
+
 	while(1)
 	{
 		if(custom_led_state == LED_STATE_IDLE)
@@ -57,6 +59,7 @@ void custom_led_task(void *p)
 	}
 }
 
+/* 初始化 LED GPIO 并创建指示灯任务。 */
 int custom_led_init(void)
 {    
 	cm_gpio_cfg_t gpio_cfg = {0};

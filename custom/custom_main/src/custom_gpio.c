@@ -9,16 +9,18 @@
 #define	SET_WAKEUP_HIGH	cm_gpio_set_level(WAKEUP_GPIO, CM_GPIO_LEVEL_HIGH)
 #define	SET_WAKEUP_LOW	cm_gpio_set_level(WAKEUP_GPIO, CM_GPIO_LEVEL_LOW)
 
+/* GPIO 后台任务入口。 */
 void custom_gpio_task(void *p)
 {	
 	while(1)
 	{
 		SET_WAKEUP_HIGH;
-		
+
 		osDelay(ONE_SECONED);	// 1秒
 	}
 }
 
+/* 初始化项目使用的 GPIO 引脚和任务。 */
 int custom_gpio_init(void)
 {    
 	cm_gpio_cfg_t gpio_cfg = {0};

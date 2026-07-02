@@ -24,7 +24,7 @@ static void custom_usb_recv_callback(void *data, int32_t len)						// 实测USB�
 			memcpy(usb_recv_data->data, data, len);
 			usb_recv_data->datalen = len;
 			usb_recv_data->event = CUSTOM_USB_EVENTRECV;
-			
+
 			if (osOK != osMessageQueuePut(USB_QUEUE_HANDLE, &usb_recv_data, 0, 0))   //timeout一定要为0  不能在回调中做阻塞操作
 			{
 				cm_free(usb_recv_data);	// 失败释放
@@ -43,7 +43,7 @@ static void custom_usb_event_callback(int32_t event)
 	if (usb_recv_data != NULL)
 	{
 		usb_recv_data->event = event;
-		
+
 		if (osOK != osMessageQueuePut(USB_QUEUE_HANDLE, &usb_recv_data, 0, 0))
 		{
 			cm_free(usb_recv_data);	// 失败释放
@@ -84,7 +84,7 @@ static void custom_usb_task(void)
 				default:
 					break;
 			}
-			
+
 			cm_free(usb_data);
 			usb_data = NULL;
 		}
@@ -93,15 +93,16 @@ static void custom_usb_task(void)
 
 #define USB_SEND_MAX	108
 
+/* 通过 USB 通道发送数据。 */
 int custom_usb_send(uint8_t *data, int32_t len)
 {
 	int k,m,n;
-	
+
 	if((cm_usb2com_get_status() != 0) && (len > 0))
 	{
 		m = len / USB_SEND_MAX;
 		n = len % USB_SEND_MAX;
-		
+
 		if(m > 0)
 		{
 			for(k=0; k < m; k++)
@@ -110,7 +111,7 @@ int custom_usb_send(uint8_t *data, int32_t len)
 				data += USB_SEND_MAX;
 			}
 		}
-		
+
 		if(n > 0)
 		{
 			cm_usb2com_send_data(data, n);
@@ -120,6 +121,7 @@ int custom_usb_send(uint8_t *data, int32_t len)
 	return 0;
 }
 
+/* 初始化 USB 通道、队列和后台任务。 */
 int custom_usb_init(void)
 {
 #ifndef	UART2													// 因为UART2中已经调用该函数

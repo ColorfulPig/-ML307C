@@ -18,11 +18,12 @@
 
 static CLOUD_SPS cloud_sps;
 
+/* 将业务数据编码后作为 OneNET 属性上报。 */
 int custom_cloud_send_onenet_attribute_post(uint8_t *buf, uint16_t len)	//-xxx
 {
 	int w_len = make_base64(0, buf, len, cloud_sps.base64_buffer, PRO_BUFFER_LENGTH);
 	cloud_sps.base64_buffer[w_len] = 0;
-		
+
 	if(w_len > 0)
 	{
 		char *identification[2];
@@ -37,6 +38,7 @@ int custom_cloud_send_onenet_attribute_post(uint8_t *buf, uint16_t len)	//-xxx
 	return -1;
 }
 
+/* 封装本地 Cloud 协议帧并交给 OneNET 上报。 */
 int custom_cloud_sendFrame(uint8_t cid, uint8_t tid, uint8_t *buf, uint16_t len)
 {
 	if(cloud_sps.sbuf != NULL)
@@ -54,14 +56,14 @@ int custom_cloud_sendFrame(uint8_t cid, uint8_t tid, uint8_t *buf, uint16_t len)
 			memcpy(&cloud_sps.sbuf[pos], buf, len);
 			pos += len;
 		}
-		
+
 		uint8_t check = calc_xor(&cloud_sps.sbuf[1], pos - 1);
 		cloud_sps.sbuf[pos++] = check;
 		cloud_sps.sbuf[pos++] = PRO_TAIL;
 
 		custom_cloud_send_onenet_attribute_post(cloud_sps.sbuf, pos);
 		Cloud_printHex("custom_cloud_send_onenet_attribute_post():", cloud_sps.sbuf, pos);
-		
+
 		return 0;
 	}
 	else
@@ -70,6 +72,7 @@ int custom_cloud_sendFrame(uint8_t cid, uint8_t tid, uint8_t *buf, uint16_t len)
 	}
 }
 
+/* 逐字节接收并解析 Cloud 协议帧。 */
 int custom_cloud_OnChar(uint8_t ch)
 {
 	switch(cloud_sps.state)
@@ -128,7 +131,7 @@ int custom_cloud_OnChar(uint8_t ch)
 			{
 				return TPTC_R_FALSE;
 			}
-			
+
 			if((cloud_sps.data_len > 0) && (cloud_sps.data_body != NULL))
 			{				
 				cloud_sps.state = PRO_S_MSGDATA;
@@ -179,10 +182,11 @@ int custom_cloud_OnChar(uint8_t ch)
 		default:
 			break;
 	}
-	
+
 	return TPTC_R_CONTINUE;
 }
 
+/* 处理已经解析完成的 Cloud 协议帧并分发到对应业务。 */
 int custom_cloud_OnFrame(void)
 {
 	Cloud_printf("%s: cid=%02X,tid=%d,len=%d.", __func__, cloud_sps.cid, cloud_sps.tid, cloud_sps.data_len);
@@ -239,13 +243,19 @@ int custom_cloud_OnFrame(void)
 			custom_cloud_lte_OnInstruction(cloud_sps.tid, cloud_sps.data_body, cloud_sps.data_len);
 			break;
 		}
+		case PRO_CMD60_MODULE:                      //云端<->LTE (LTE模组专用)
+		{
+			custom_cloud_lte_OnFotaInstruction(cloud_sps.tid, cloud_sps.data_body, cloud_sps.data_len);
+			break;
+		}
 		default:
 			break;
 	}
-	
+
 	return 0;
 }
 
+/* 处理 Cloud 帧解析结束事件。 */
 int custom_cloud_OnFinish(void)
 {
 	cloud_sps.state = PRO_S_HEAD;
@@ -253,21 +263,23 @@ int custom_cloud_OnFinish(void)
 	return 0;
 }
 
+/* Cloud 后台任务入口。 */
 void custom_cloud_task(void *p)
 {
 	//int mbedtls_base64_decode( unsigned char *dst, size_t dlen, size_t *olen, const unsigned char *src, size_t slen );
-	
+
 	while(1)
 	{
-		
+
 		osDelay(ONE_SECONED);	// 1秒
 	}
 }
 
+/* 初始化 Cloud 协议缓冲区并创建后台任务。 */
 int custom_cloud_init(void)
 {
 	memset(&cloud_sps, 0, sizeof(cloud_sps));
-	
+
 	cloud_sps.data_body = cm_malloc(PRO_BUFFER_LENGTH);
 	cloud_sps.frame = cm_malloc(PRO_BUFFER_LENGTH);
 	cloud_sps.base64_buffer = cm_malloc(PRO_BUFFER_LENGTH);
@@ -280,7 +292,7 @@ int custom_cloud_init(void)
 	app_task_attr.stack_size = 1024 * 4;
 	app_task_attr.priority = osPriorityNormal;
 	osThreadNew((osThreadFunc_t)custom_cloud_task, 0, &app_task_attr);
-	
+
 	return 0;
 }
 

@@ -6,6 +6,7 @@
 static char *track_buf = NULL;
 static uint8_t track_onoff = 0;
 
+/* 统一格式化输出调试日志。 */
 int custom_track_printf(const char *_fmt, ...)
 {
 	va_list ap;
@@ -14,35 +15,36 @@ int custom_track_printf(const char *_fmt, ...)
 	if((track_buf != NULL) && (track_onoff != 0))
 	{
 		memset(track_buf, 0, TRACK_BUF_SIZE);
-		
+
 		va_start(ap,_fmt);   
 		pos = vsprintf(track_buf,_fmt,ap);  
 		va_end(ap);
-		
+
 		track_buf[pos++] = '\r';
 		track_buf[pos++] = '\n';
 		custom_track_send((uint8_t *)track_buf, pos);
 	}
-	
+
 	return pos;
 
 }
 
+/* 按十六进制格式输出调试数据。 */
 int custom_track_printHex(char *_msg, uint8_t *_data, uint16_t _len)
 {
 	uint16_t k,pos;
 	uint8_t hi,low;
-	
+
 	if((track_buf != NULL) && (track_onoff != 0))
 	{
 		if(_len>(TRACK_BUF_SIZE/3-64))
 		{
 			return -1;
 		}
-		
+
 		memset(track_buf, 0, TRACK_BUF_SIZE);
 		pos = sprintf(track_buf,"%s,len=%d,hex=", _msg, _len);
-		
+
 		for(k=0;k<_len;k++)
 		{
 			hi 	= (_data[k]>>4)&0x0F;
@@ -55,10 +57,11 @@ int custom_track_printHex(char *_msg, uint8_t *_data, uint16_t _len)
 		track_buf[pos++] = '\n';	
 		custom_track_send((uint8_t *)track_buf, pos);
 	}
-	
+
 	return 0;
 }
 
+/* 按原始字节内容输出调试数据。 */
 int	custom_track_printRaw(char *_msg, uint8_t *_data, uint16_t _len)
 {
 	uint16_t pos;
@@ -72,24 +75,26 @@ int	custom_track_printRaw(char *_msg, uint8_t *_data, uint16_t _len)
 
 		memset(track_buf, 0, TRACK_BUF_SIZE);
 		pos = sprintf(track_buf, "%s,len=%d,raw=", _msg,  _len);
-		
+
 		memcpy(&track_buf[pos], _data, _len);
 		pos += _len;
 		track_buf[pos++] = '\r';
 		track_buf[pos++] = '\n';
 		custom_track_send((uint8_t *)track_buf, pos);
 	}
-	
+
 	return 0;
 }
 
+/* 打开或关闭调试日志输出。 */
 int custom_track_enable(uint8_t _onoff)
 {
 	track_onoff = _onoff;
-	
+
 	return 0;
 }
 
+/* 初始化调试日志缓存。 */
 int custom_track_init(void)
 {    
 	track_buf = cm_malloc(TRACK_BUF_SIZE);

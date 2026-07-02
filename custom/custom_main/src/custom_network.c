@@ -20,7 +20,7 @@ void custom_network_event_callback(custom_network_event_e state)
 		{
 			network_state.SimCard = 0;
 			Network_printf("NETWORK_EVENT_NO_SIM");
-			
+
 			sim_check_times++;
 			if(sim_check_times >= 10)
 			{
@@ -45,7 +45,7 @@ void custom_network_event_callback(custom_network_event_e state)
 		{
 			network_state.Register = 0;
 			Network_printf("NETWORK_EVENT_NO_REGISTER");
-			
+
 			register_check_times++;
 			if(register_check_times >= 10)
 			{
@@ -63,12 +63,12 @@ void custom_network_event_callback(custom_network_event_e state)
 				network_state.Register = 1;
 				custom_led_setState(LED_STATE_READY);
 			}
-			
+
 			register_check_times = 0;
 			Network_printf("NETWORK_EVENT_REGISTER_READY");
 			break;
 		}
-    
+
 		/* 网络激活失败 */
 		case NETWORK_EVENT_PDP_ACTIVE_FAIL:
 		{
@@ -105,7 +105,7 @@ void custom_network_event_callback(custom_network_event_e state)
                         }
                         break;
                 }
-		
+
 		/* 网络失活，需要重新激活 */
 		case NETWORK_EVENT_PDP_DEACTIVED:
 		{
@@ -122,6 +122,7 @@ void custom_network_event_callback(custom_network_event_e state)
 	}
 }
 
+/* 等待 SIM 卡进入可用状态。 */
 bool custom_network_check_sim_ready(uint16_t timeout_s)
 {
 	uint16_t retry = 0;
@@ -134,15 +135,16 @@ bool custom_network_check_sim_ready(uint16_t timeout_s)
 		retry++;
 		osDelay(ONE_SECONED);
 	}
-	
+
 	return false;
 }
 
+/* 等待网络注册成功。 */
 bool custom_network_check_register(uint16_t timeout_s)
 {
 	uint16_t retry = 0;
 	cm_cereg_state_t cereg_state = {0};
-	
+
 	while (retry < timeout_s)
 	{
 		if (cm_modem_get_cereg_state(&cereg_state) == 0 && (cereg_state.state == 1 || cereg_state.state == 5))
@@ -152,14 +154,15 @@ bool custom_network_check_register(uint16_t timeout_s)
 		retry++;
 		osDelay(ONE_SECONED);
 	}
-	
+
 	return false;
 }
 
+/* 等待 PDP 激活成功。 */
 bool custom_network_check_active(uint16_t timeout_s)
 {
 	uint16_t retry = 0;
-	
+
 	while (retry < timeout_s)
 	{
 		if (cm_modem_get_pdp_state(1) == 1)
@@ -169,7 +172,7 @@ bool custom_network_check_active(uint16_t timeout_s)
 		retry++;
 		osDelay(ONE_SECONED);
 	}
-	
+
 	return false;
 }
 
@@ -214,7 +217,7 @@ void custom_network_task(void *p)
 	while(1)
 	{		
 		osDelay(ONE_SECONED * 60); 					// 每60s检查一下网络状态，用户可自行更改
-		
+
 		// 检查SIM卡 
 		if(custom_network_check_sim_ready(NETWORK_CHECK_WAIT_SIM_READY))
 		{
@@ -224,7 +227,7 @@ void custom_network_task(void *p)
 		{
 			custom_network_event_callback(NETWORK_EVENT_NO_SIM);
 		}
-		
+
 		// 检查基站的注册状态
 		if(custom_network_check_register(NETWORK_CHECK_WAIT_REGISTER_TIMEOUT))
 		{
@@ -244,14 +247,14 @@ void custom_network_task(void *p)
 		{
 			custom_network_event_callback(NETWORK_EVENT_PDP_DEACTIVED);		// 失活
 		}
-		
+
 		// 检测信号质量(GC)
 		char s_rssi[8],s_ber[8];
 		if(cm_modem_get_csq(s_rssi, s_ber) == 0)
 		{
 			uint8_t rssi = atoi(s_rssi);
 			uint8_t ber = atoi(s_ber);
-			
+
 			Network_printf("CSQ: %d,%d", rssi, ber);
 			network_state.CSQ = rssi;
 			if(network_state.CSQ == 99)	network_state.CSQ = 0;
@@ -268,6 +271,7 @@ void custom_network_task(void *p)
 	}
 }
 
+/* 初始化网络状态并创建网络维护任务。 */
 int custom_network_init(void)
 {
 	osThreadAttr_t app_task_attr = {0};

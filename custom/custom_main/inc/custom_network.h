@@ -46,8 +46,9 @@ typedef struct
 
 extern custom_network_data_t network_state;
 
+/* 初始化网络状态并创建网络维护任务。 */
 int custom_network_init(void);
-	
+
 
 #endif
 

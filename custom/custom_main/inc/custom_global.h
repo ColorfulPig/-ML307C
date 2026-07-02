@@ -9,11 +9,11 @@
 
 #define	APP_VERSION_HIGH	1
 #define	APP_VERSION_MID		0
-#define	APP_VERSION_LOW		1
+#define	APP_VERSION_LOW		2
 
 #define	testAPP_VERSION_HIGH	1
 #define	testAPP_VERSION_MID		0
-#define	testAPP_VERSION_LOW		2
+#define	testAPP_VERSION_LOW		3
 
 #define SN_BUF_SIZE			(24)
 #define IMEI_BUF_SIZE		(20)

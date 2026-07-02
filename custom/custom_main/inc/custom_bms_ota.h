@@ -59,12 +59,19 @@ typedef struct
 
 extern BMS_OTA	bms_ota;
 
+/* 初始化 BMS OTA 状态并创建后台任务。 */
 int custom_bms_ota_init(void);
+/* 向 BMS 发送 OTA 握手包，携带固件大小和版本。 */
 int custom_bms_ota_sendHandshakeCmd(uint32_t firmware_size, char *firmware_version);
+/* 向 BMS 发送 OTA 固件数据包。 */
 int custom_bms_ota_sendDataCmd(uint16_t frame_sn, uint8_t *buf, uint16_t len);
+/* 向 BMS 发送 OTA 传输完成包。 */
 int custom_bms_ota_sendFinishCmd(void);
+/* 处理 BMS 返回的 OTA 应答包并推进升级状态机。 */
 int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len);
+/* 启动 BMS OTA 流程，准备固件来源并进入握手阶段。 */
 int custom_bms_ota_start(uint8_t save_mode, char *file, uint32_t file_size);
+/* 结束 BMS OTA 流程，清理资源并按结果删除临时文件。 */
 int custom_bms_ota_finish(int result);
 
 

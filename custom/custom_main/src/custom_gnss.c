@@ -8,18 +8,20 @@ uint8_t Gnss_working = 0;
 
 gnss_location_info_t gnss_location;
 
+/* 处理 AGNSS 数据更新结果回调。 */
 void custom_agnss_update_callback(cm_agnss_update_result_e mode, const char *update_time, uint32_t size)
 {
 	GNSS_printf("%s: mode=%d,update_time=%s,size=%d", __func__, mode, update_time, size);
 }
 
+/* 处理 GNSS NMEA 数据回调并统计卫星信息。 */
 void custom_gnss_nmea_callback(const char *nmea, uint32_t len)
 {	
 	char gsv_total[8] = {0}, gsv_sn[8] = {0}, visual_satellite[8] = {0};
 	uint8_t gp_satellite = 0,gb_satellite = 0,gl_satellite = 0;
 	uint8_t total_satellite = 0;
 	char *gsv_nmea;
-	
+
 	//GNSS_printf("%s: len=%d %s", __func__, len, (char *)nmea);
 
 	// 计算可视卫星数
@@ -58,14 +60,14 @@ void custom_gnss_nmea_callback(const char *nmea, uint32_t len)
 			} 
 		}
 	}
-	
+
 	total_satellite = gp_satellite + gb_satellite + gl_satellite;
-	
+
 	gnss_location.vsat = total_satellite;
 
 	//GNSS_printf("gp_satellite=%d,gb_satellite=%d,gl_satellite=%d,total_satellite=%d", gp_satellite, gb_satellite, gl_satellite, total_satellite);
-	
-	
+
+
 	/*
 	$GNRMC,065336.000,A,2308.44865,N,11335.43709,E,0.390,359.654,081125,,,A,U*0F 
 	$GNGGA,065336.000,2308.44865,N,11335.43709,E,1,09,7.333,16.8,M,-4.5,M,,*67 
@@ -84,7 +86,7 @@ void custom_gnss_nmea_callback(const char *nmea, uint32_t len)
 	$GLGSV,2,1,8,68,20,167,30,69,67,202,30,81,16,83,8,82,12,130,13,1*45 
 	$GLGSV,2,2,8,80,42,315,9,73,11,264,,70,32,323,,79,28,23,,1*45 
 	$GNVTG,359.654,T,,M,0.390,N,0.724,K,A*10 
-	
+
 	[GNSS]latitude=23.140810 
 	[GNSS]longitude=113.590622 
 	[GNSS]hdop=7.333000 
@@ -97,17 +99,19 @@ void custom_gnss_nmea_callback(const char *nmea, uint32_t len)
 	*/
 }
 
+/* 处理 GNSS AT 命令响应回调。 */
 void custom_gnss_rsp_callback(const char *data, uint32_t len)
 {
 	GNSS_printf("%s: %s", __func__, (char *)data);
 }
 
+/* 主动获取 GNSS 当前定位信息。 */
 void custom_gnss_getlocateinfo(void)
 {
 	cm_gnss_location_info_t location;
 
 	memset(&location, 0, sizeof(location));
-	
+
 	if(0 == cm_gnss_get_location_info(&location))
 	{
 		gnss_location.latitude = location.latitude;
@@ -122,6 +126,7 @@ void custom_gnss_getlocateinfo(void)
 	}
 }
 
+/* 打开或关闭 GNSS 定位功能。 */
 int	custom_gnss_enable(uint8_t enable)
 {
 	uint32_t nema_mask = 0xFFFF;
@@ -133,7 +138,7 @@ int	custom_gnss_enable(uint8_t enable)
 		{
 			Gnss_working = 1;
 			Agnss_update = 0;
-			
+
 			GNSS_printf("%s: 1", __func__);
 
 			// 配置GNSS
@@ -151,13 +156,13 @@ int	custom_gnss_enable(uint8_t enable)
 				GNSS_printf("%s: open gnss without agnss", __func__);
 				cm_gnss_open(CM_GNSS_TYPE_GPS|CM_GNSS_TYPE_BDS|CM_GNSS_TYPE_QZSS|CM_GNSS_TYPE_GLO, CM_AGNSS_DISABLE);
 			}
-			
+
 			// 注册NMEA数据上报
 			cm_gnss_nmea_all_callback_regist(custom_gnss_nmea_callback);
 
 			// 注册RAW数据上报
 			//cm_gnss_rawdata_callback_regist(custom_gnss_rsp_callback);
-			
+
 			GNSS_printf("%s: init finish!", __func__);
 		}
 	}
@@ -173,10 +178,11 @@ int	custom_gnss_enable(uint8_t enable)
 			cm_gnss_close();
 		}
 	}
-	
+
 	return 0;
 }
 
+/* GNSS 后台任务，按需启动定位并维护定位状态。 */
 void custom_gnss_task(void *p)
 {
 	uint32_t count = 0;
@@ -192,7 +198,7 @@ void custom_gnss_task(void *p)
 		{
 			// 获取定位数据
 			custom_gnss_getlocateinfo();	
-		
+
 			// 开启AGNSS
 			if(custom_network_IsPDPActive())
 			{
@@ -219,6 +225,7 @@ void custom_gnss_task(void *p)
 	}
 }
 
+/* 初始化 GNSS 相关状态并创建后台任务。 */
 int custom_gnss_init(void)
 {
 	osThreadAttr_t app_task_attr = {0};

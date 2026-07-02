@@ -68,6 +68,7 @@ enum
 
 // LTE特有指令
 #define	PRO_CMD50_MODULE				0x50		// 云端<->LTE
+#define	PRO_CMD60_MODULE				0x60		//云端<->LTE (LTE模组专用)
 
 
 #endif

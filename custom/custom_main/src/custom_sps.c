@@ -13,7 +13,7 @@ const TPTC_PROC ProcSci0Tab[] =
 {
 	{ custom_bms_OnChar, custom_bms_OnFrame, custom_bms_OnFinish, custom_bms_OnBlock },
 };
-	
+
 //串口1支持的协议-gnss
 const TPTC_PROC ProcSci1Tab[] = 
 {
@@ -48,7 +48,7 @@ void Sps_InUart0Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 
 	SYSTEM_printRaw("Sps_InUart0Scan(BMS):", pv_Buffer, v_Length);
 	SYSTEM_printHex("Sps_InUart0Scan(BMS):", pv_Buffer, v_Length);
-	
+
 	pItem = &ProcSci0Tab[0];
 	for ( i=0; i<_countof(ProcSci0Tab); ++i,++pItem )
 	{
@@ -66,7 +66,7 @@ void Sps_InUart0Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 				{
 					result = (*pItem->inCharScan)(pv_Buffer[aI]);
 				}
-			
+
 				if(result==TPTC_R_FRAME)
 				{
 					if (pItem->inFrameScan)
@@ -91,9 +91,9 @@ void Sps_InUart1Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 	int aI;
 	uint8_t result;
 	const TPTC_PROC * pItem;
-	
+
 	SYSTEM_printRaw("Sps_InUart1Scan:", pv_Buffer, v_Length);
-	
+
 	pItem = &ProcSci1Tab[0];
 	for ( i=0; i<_countof(ProcSci1Tab); ++i,++pItem )
 	{
@@ -108,7 +108,7 @@ void Sps_InUart1Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 			{
 				result = (*pItem->inCharScan)(pv_Buffer[aI]);
 			}
-		
+
 			if(result==TPTC_R_FRAME)
 			{
 				if (pItem->inFrameScan)
@@ -132,9 +132,9 @@ void Sps_InUart2Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 	int aI;
 	uint8_t result;
 	const TPTC_PROC * pItem;
-	
+
 	SYSTEM_printRaw("Sps_InUart2Scan(BT):", pv_Buffer, v_Length);
-	
+
 	pItem = &ProcSci2Tab[0];
 	for ( i=0; i<_countof(ProcSci2Tab); ++i,++pItem )
 	{
@@ -149,7 +149,7 @@ void Sps_InUart2Scan(uint8_t *pv_Buffer,uint16_t v_Length)
 			{
 				result = (*pItem->inCharScan)(pv_Buffer[aI]);
 			}
-		
+
 			if(result==TPTC_R_FRAME)
 			{
 				if (pItem->inFrameScan)
@@ -173,7 +173,7 @@ void Sps_InUsbScan(uint8_t *pv_Buffer,uint16_t v_Length)
 	int aI;
 	uint8_t result;
 	const TPTC_PROC * pItem;
-	
+
 	pItem = &ProcUsbTab[0];
 	for ( i=0; i<_countof(ProcUsbTab); ++i,++pItem )
 	{
@@ -188,7 +188,7 @@ void Sps_InUsbScan(uint8_t *pv_Buffer,uint16_t v_Length)
 			{
 				result = (*pItem->inCharScan)(pv_Buffer[aI]);
 			}
-		
+
 			if(result==TPTC_R_FRAME)
 			{
 				if (pItem->inFrameScan)
@@ -212,7 +212,7 @@ void Sps_InCloudScan(uint8_t *pv_Buffer,uint16_t v_Length)
 	int aI;
 	uint8_t result;
 	const TPTC_PROC * pItem;
-	
+
 	pItem = &ProcCloudTab[0];
 	for ( i=0; i<_countof(ProcCloudTab); ++i,++pItem )
 	{
@@ -227,7 +227,7 @@ void Sps_InCloudScan(uint8_t *pv_Buffer,uint16_t v_Length)
 			{
 				result = (*pItem->inCharScan)(pv_Buffer[aI]);
 			}
-		
+
 			if(result==TPTC_R_FRAME)
 			{
 				if (pItem->inFrameScan)

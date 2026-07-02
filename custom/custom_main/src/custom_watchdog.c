@@ -9,10 +9,11 @@
 #define	SET_WATCHDOG_HIGH	cm_gpio_set_level(WATCHDOG_GPIO, CM_GPIO_LEVEL_HIGH)
 #define	SET_WATCHDOG_LOW	cm_gpio_set_level(WATCHDOG_GPIO, CM_GPIO_LEVEL_LOW)
 
+/* 看门狗后台任务，周期性翻转喂狗引脚。 */
 void custom_watchdog_task(void *p)
 {
 	uint8_t level_flag = 0;
-	
+
 	while(1)
 	{
 		if(level_flag == 0)
@@ -25,11 +26,12 @@ void custom_watchdog_task(void *p)
 			level_flag = 0;
 			SET_WATCHDOG_LOW;
 		}
-		
+
 		osDelay(ONE_SECONED);	// 1秒
 	}
 }
 
+/* 初始化看门狗 GPIO 并创建喂狗任务。 */
 int custom_watchdog_init(void)
 {    
 	cm_gpio_cfg_t gpio_cfg = {0};

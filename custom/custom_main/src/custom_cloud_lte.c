@@ -60,6 +60,7 @@ static int custom_cloud_lte_parse_lte_fota_param(const char *param,
 	return 0;
 }
 
+/* 解析 BMS OTA 参数，校验固件大小、版本、URL 和 MD5。 */
 static int custom_cloud_lte_parse_bms_fota_param(const char *param, uint32_t *firmware_size, char *firmware_version, char *firmware_url, char *firmware_md5)
 {
 	if((param == NULL) || (firmware_size == NULL) || (firmware_version == NULL) || (firmware_url == NULL) || (firmware_md5 == NULL))
@@ -85,6 +86,7 @@ static int custom_cloud_lte_parse_bms_fota_param(const char *param, uint32_t *fi
 	return 0;
 }
 
+/* 把 BMS OTA 固件元数据写入本地信息文件。 */
 static int custom_cloud_lte_write_bms_info_file(uint32_t firmware_size, const char *firmware_version, const char *firmware_url, const char *firmware_md5)
 {
 	int32_t fd = -1;
@@ -139,43 +141,37 @@ static void custom_cloud_lte_convert_download_url(const char *src_url, char *dst
 	}
 }
 
-// 发送执行结果
-int custom_cloud_lte_sendResult(uint8_t tid, uint8_t cmd, uint8_t result)
+// LTE 平台结果回包统一出口：cid 决定外层命令 ID 是 0x50 还是 0x60。
+int custom_cloud_lte_sendResultFrame(uint8_t cid, uint8_t tid, uint8_t cmd, uint8_t result)
 {
 	uint8_t buf[2];
-	
+
+	// 当前只允许 LTE 旧命令 0x50 和 LTE OTA 新命令 0x60 使用该回包格式。
+	if((cid != PRO_CMD50_MODULE) && (cid != PRO_CMD60_MODULE))
+	{
+		return -1;
+	}
+
+	// 协议 data 区固定为：data[0]=子命令，data[1]=执行结果。
 	buf[0] = cmd;
 	buf[1] = result;
-	custom_cloud_sendFrame(PRO_CMD50_MODULE, tid, buf, 2);
-	
+	custom_cloud_sendFrame(cid, tid, buf, 2);
+
 	return 0;
 }
 
-// 发送 BMS 固件信息和 4G 模块信息
-int custom_cloud_lte_sendBmsLteInfo(uint8_t tid,
-	uint32_t bms_size, char *bms_version, char *imei, char *iccid, char *btmac, char *lte_sdk_version, char *lte_app_version)
-{
-	uint8_t buf[256]={0};
-	uint16_t pos = 0, len = 0;
-	
-	buf[pos++] = CLOUD_GET_BMS_LTE_INFO;
-
-	len = common_sprintf(&buf[pos], ",%ld,%s,%s,%s,%s,%s,%s,", bms_size, bms_version, imei, iccid, btmac, lte_sdk_version, lte_app_version);
-	pos += len;
-	
-	Cloud_printRaw("custom_cloud_lte_sendBmsLteInfo:", buf, pos);
-	custom_cloud_sendFrame(PRO_CMD50_MODULE, tid, buf, pos);
-	
-	return 0;
-}
-
-// LTE 特有指令处理
-int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
+// 0x60 命令 ID 入口，LTE OTA 从原 0x50/0x01 迁移到这里处理。
+int custom_cloud_lte_OnFotaInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 {
 	uint8_t lte_cmd;
 	uint16_t pos;
 	int ret = -1;
-	
+
+	if((buf == NULL) || (len == 0))
+	{
+		return -1;
+	}
+
 	pos = 0;
 	lte_cmd = buf[pos++];
 
@@ -218,15 +214,63 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 						lte_software_size, lte_software_version, lte_hardware_version, lte_download_url, lte_fota_md5, lte_manufacturer);
 
 					ret = custom_fota_start(FOTA_MODULE_LTE, lte_download_url, lte_software_size, lte_fota_md5, FOTA_SAVE_MEM, FOTA_UPDATE_YES);
+					if(ret == 0)
+					{
+						// 保存平台 tid，FOTA 下载线程后续才能继续按原事务号回包。
+						fota.cloud_tid = tid;
+						fota.cloud_reply_enabled = 1;
+					}
 				}
 			}
 
-			custom_cloud_lte_sendResult(tid, lte_cmd, (ret == 0) ? CLOUD_RESULT_SUCCESS : CLOUD_RESULT_FAIL);
+			// 0x60 入口的受理结果必须按 0x60 命令 ID 回平台。
+			custom_cloud_lte_sendResultFrame(PRO_CMD60_MODULE, tid, lte_cmd, (ret == 0) ? CLOUD_LTE_FOTA_RESULT_ACCEPTED : CLOUD_LTE_FOTA_RESULT_ACCEPT_FAIL);
 			break;
 		}
+		default:
+		{
+			// 0x60 下暂只支持 LTE OTA 子命令，其他子命令统一失败回包。
+			custom_cloud_lte_sendResultFrame(PRO_CMD60_MODULE, tid, lte_cmd, CLOUD_RESULT_FAIL);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+/* 向平台回传 BMS 固件和 LTE 通讯模块信息。 */
+int custom_cloud_lte_sendBmsLteInfo(uint8_t tid,
+	uint32_t bms_size, char *bms_version, char *imei, char *iccid, char *btmac, char *lte_sdk_version, char *lte_app_version)
+{
+	uint8_t buf[256]={0};
+	uint16_t pos = 0, len = 0;
+
+	buf[pos++] = CLOUD_GET_BMS_LTE_INFO;
+
+	len = common_sprintf(&buf[pos], ",%ld,%s,%s,%s,%s,%s,%s,", bms_size, bms_version, imei, iccid, btmac, lte_sdk_version, lte_app_version);
+	pos += len;
+
+	Cloud_printRaw("custom_cloud_lte_sendBmsLteInfo:", buf, pos);
+	custom_cloud_sendFrame(PRO_CMD50_MODULE, tid, buf, pos);
+
+	return 0;
+}
+
+// 0x50 命令 ID 入口，保留重启、BMS 下载、查询信息等旧命令处理。
+int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
+{
+	uint8_t lte_cmd;
+	uint16_t pos;
+	int ret = -1;
+
+	pos = 0;
+	lte_cmd = buf[pos++];
+
+	switch(lte_cmd)
+	{
 		case CLOUD_LTE_RESTART:
 		{
-			custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_SUCCESS);
+			custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_SUCCESS);
 			osDelay(ONE_SECONED * 3);
 			cm_pm_reboot();
 			break;
@@ -235,7 +279,7 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 		{
 			uint32_t bms_firmware_size = 0;
 			char bms_firmware_version[64] = {0}, bms_firmware_url[256] = {0}, bms_download_url[256] = {0}, bms_firmware_md5[33] = {0};
-			
+
 			if(custom_cloud_lte_parse_bms_fota_param((char *)&buf[pos], &bms_firmware_size, bms_firmware_version, bms_firmware_url, bms_firmware_md5) == 0)
 			{
 				custom_fota_md5_to_lower(bms_firmware_md5);
@@ -252,11 +296,11 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 
 			if(ret == 0)
 			{
-				custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_SUCCESS);
+				custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_SUCCESS);
 			}
 			else
 			{
-				custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_FAIL);
+				custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_FAIL);
 			}
 			break;
 		}
@@ -264,7 +308,7 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 		{
 			uint32_t bms_firmware_size = 0;
 			char bms_firmware_version[64] = {0}, bms_firmware_url[256] = {0}, bms_firmware_md5[33] = {0};
-			
+
 			if((cm_fs_exist(BMS_FOTA_FILE_SAVE_DIR)==true) && (cm_fs_exist(BMS_FOTA_INFO_SAVE_DIR)==true))
 			{
 				int bms_file_size = cm_fs_filesize(BMS_FOTA_FILE_SAVE_DIR);
@@ -295,7 +339,7 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 					}
 				}
 			}
-			
+
 			custom_cloud_lte_sendBmsLteInfo(0, bms_firmware_size, bms_firmware_version, g_IMEI, g_ICCID, bluetooth_MAC, g_SDKVER, g_APPVER);
 			break;
 		}
@@ -309,15 +353,15 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 			{
 				bms_ota.timing_hour = ota_hour_time;
 				bms_ota.timing_upgrade = 1;
-				custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_SUCCESS);
+				custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_SUCCESS);
 			}
 			else
 			{
 				bms_ota.timing_hour = 0;
 				bms_ota.timing_upgrade = 0;
-				custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_FAIL);
+				custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_FAIL);
 			}
-			
+
 			custom_profile_setNumber(CONFIG_ITEM_BMS_TIMING_TASK, bms_ota.timing_upgrade);
 			custom_profile_setNumber(CONFIG_ITEM_BMS_TIMING_TIME, bms_ota.timing_hour);
 			custom_profile_save();
@@ -326,7 +370,7 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 		case CLOUD_GNSS_REQUEST:
 		{
 			uint8_t ctrl;
-		
+
 			ctrl = buf[pos];
 			if(ctrl == 1)
 			{
@@ -338,8 +382,8 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 				Cloud_printf("GPS request: close");
 				custom_gnss_enable(0);
 			}
-			
-			custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_SUCCESS);
+
+			custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_SUCCESS);
 			break;
 		}
 		case CLOUD_REPORT_INTERVAL_CTRL:
@@ -348,14 +392,15 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 		}
 		default:
 		{
-			custom_cloud_lte_sendResult(tid, lte_cmd, CLOUD_RESULT_FAIL);
+			custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, CLOUD_RESULT_FAIL);
 			break;
 		}
 	}
-	
+
 	return 0;
 }
 
+/* Cloud LTE 后台任务入口。 */
 void custom_cloud_lte_task(void *p)
 {
 	(void)p;
@@ -365,6 +410,7 @@ void custom_cloud_lte_task(void *p)
 	}
 }
 
+/* 初始化 Cloud LTE 业务处理任务。 */
 int custom_cloud_lte_init(void)
 {
 	// 创建任务

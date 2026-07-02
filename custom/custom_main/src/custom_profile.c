@@ -14,7 +14,7 @@ int custom_object_to_profile(uint8_t delect)
 		cJSON_printf("%s: error. profile_cjson_root=NULL.", __func__);
 		return -1;
 	}
-	
+
 	// 对象转文本
 	char *out = cJSON_Print(profile_cjson_root);
 	if(out == NULL)
@@ -48,10 +48,10 @@ int custom_object_to_profile(uint8_t delect)
 		}	
 	    cm_fs_close(fd);
 	}
-	
+
 	// 释放内存
 	cm_free(out);
-	
+
 	return ret;
 }
 
@@ -65,7 +65,7 @@ int custom_profile_to_object(void)
 		cJSON_printf("%s: profile size is too big. filesize=%d.", __func__, filesize);
 		return -1;
 	}
-	
+
 	// 申请内存	
 	profile_buf = cm_malloc(PROFILE_BUF_SIZE);
 	if(profile_buf == NULL)
@@ -102,7 +102,7 @@ int custom_profile_to_object(void)
 
 	// 释放内存
 	cm_free(profile_buf);												
-	
+
 	if(profile_cjson_root == NULL)
 	{
 		cJSON_printf("%s: cJSON_Parse(%s) error.[%s]", __func__, PROFILE_NAME, cJSON_GetErrorPtr());
@@ -130,7 +130,7 @@ int custom_object_create(void)								// 参数版本改变时，添加参数初
 		custom_profile_addString(CONFIG_ITEM_BT_MAC, CONFIG_DATA_BT_MAC);
 		custom_profile_addString(CONFIG_ITEM_LBS_ONEOS_PID, CONFIG_DATA_LBS_ONEOS_PID);
 	}
-	
+
 	return 0;
 }
 
@@ -157,12 +157,12 @@ int custom_profile_update(void)								// 参数版本改变时，需要参数�
 		char remain_lbs_oneos_pid[64]={0};
 		custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, remain_lbs_oneos_pid);
 		cJSON_printf("remain_lbs_oneos_pid:%s", remain_lbs_oneos_pid);
-		
+
 		////////////////////////////////////////////////////////////////
 
 		cJSON_Delete(profile_cjson_root);			// 删除旧对象
 		profile_cjson_root = NULL;
-			
+
 		custom_object_create(); 					// 新创配置对象
 
 		////////// 恢复重要参数 ////////
@@ -173,9 +173,9 @@ int custom_profile_update(void)								// 参数版本改变时，需要参数�
 		custom_profile_setString(CONFIG_ITEM_LBS_ONEOS_PID, remain_lbs_oneos_pid);
 
 		////////////////////////////////////////////////////////////////
-				
+
 		custom_object_to_profile(0); 				// 保存配置对象到配置文件(不删除对象)
-		
+
 	}
 
 	return 0;
@@ -207,15 +207,15 @@ int custom_profile_load(void)
 		char device_id[32]={0};
 		custom_profile_getString(CONFIG_ITEM_DEVICE_ID, device_id);
 		cJSON_printf("device_id:%s", device_id);
-		
+
 		int bms_ota_timing_upgrade;
 		custom_profile_getNumber(CONFIG_ITEM_BMS_TIMING_TASK, &bms_ota_timing_upgrade);
 		cJSON_printf("bms_ota_timing_upgrade:%d", bms_ota_timing_upgrade);
-		
+
 		int bms_ota_timing_hour;
 		custom_profile_getNumber(CONFIG_ITEM_BMS_TIMING_TIME, &bms_ota_timing_hour);
 		cJSON_printf("bms_ota_timing_hour:%d", bms_ota_timing_hour);
-				
+
 		char bluetooth_mac[32]={0};
 		custom_profile_getString(CONFIG_ITEM_BT_MAC, bluetooth_mac);
 		cJSON_printf("bluetooth_mac: %s", bluetooth_mac);
@@ -229,13 +229,14 @@ int custom_profile_load(void)
 			custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, lbs_oneos_pid);
 		}
 		cJSON_printf("lbs_oneos_pid: %s", lbs_oneos_pid);
-		
+
 		cJSON_printf("========================");
 	}
 
 	return 0;
 }
 
+/* 确保配置文件存在并加载配置参数。 */
 int custom_profile_init(void)
 {
 	int ret, retry;
@@ -248,9 +249,9 @@ int custom_profile_init(void)
 		if(cm_fs_exist(PROFILE_NAME) == false)	// 不存在，则创建。
 		{
 			cJSON_printf("%s: %s is not exist. create it!!! retry=%d", __func__, PROFILE_NAME, retry);
-		
+
 			custom_object_create(); 			// 创建配置对象
-			
+
 			custom_object_to_profile(1); 		// 保存配置对象到配置文件(删除对象)
 
 			if(retry >= 3)
@@ -284,7 +285,7 @@ int custom_profile_init(void)
 		if(ret != 0)						// 参数有变化
 		{
 			cJSON_printf("%s: custom_profile_load() error!!! ret=%d,retry=%d", __func__, ret, retry);
-			
+
 			if(retry >= 3)
 			{
 				cJSON_printf("%s: error. retry=%d", __func__, retry);
@@ -311,6 +312,7 @@ int custom_profile_setNumber(char *item, int value)
 	return 0;
 }
 
+/* 新增数值型配置项。 */
 int custom_profile_addNumber(char *item, int value)
 {
 	if(profile_cjson_root != NULL)
@@ -320,6 +322,7 @@ int custom_profile_addNumber(char *item, int value)
 	return 0;
 }
 
+/* 读取数值型配置项。 */
 int custom_profile_getNumber(char *item, int *value)
 {
 	if(profile_cjson_root != NULL)
@@ -331,7 +334,7 @@ int custom_profile_getNumber(char *item, int *value)
 			return 0;
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -345,6 +348,7 @@ int custom_profile_setString(char *item, char *value)
 	return 0;
 }
 
+/* 新增字符串配置项。 */
 int custom_profile_addString(char *item, char *value)
 {
 	if(profile_cjson_root != NULL)
@@ -354,6 +358,7 @@ int custom_profile_addString(char *item, char *value)
 	return 0;
 }
 
+/* 读取字符串配置项。 */
 int custom_profile_getString(char *item, char *value)
 {
 	if(profile_cjson_root != NULL)
@@ -369,7 +374,7 @@ int custom_profile_getString(char *item, char *value)
 			return -2;
 		}
 	}
-	
+
 	return -1;
 }
 

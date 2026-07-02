@@ -27,7 +27,7 @@ static void cm_uart0_event_task(void *arg)
 		if (osMessageQueueGet(s_uart0_event_queue, &msg, NULL, osWaitForever) == osOK)
 		{
 			cm_log_printf(0, "uart0 event msg type = %d\n", msg.msg_type);
-			
+
 			if (CM_UART_EVENT_TYPE_RX_OVERFLOW & msg.msg_type)
 			{
 				cm_log_printf(0, "CM_UART0_EVENT_TYPE_RX_OVERFLOW... ...");
@@ -79,7 +79,7 @@ static void cm_serial_uart0_callback(void *param, uint32_t type)
 	{
 		/* 触发其他线程处理事件 */
 		msg.msg_type = type;
-		
+
 		if (s_uart0_event_queue != NULL)
 		{
 			osMessageQueuePut(s_uart0_event_queue, &msg, 0, 0);
@@ -236,7 +236,7 @@ static void cm_serial_uart1_callback(void *param, uint32_t type)
 	{
 		/* 触发其他线程处理事件 */
 		msg.msg_type = type;
-		
+
 		if (s_uart1_event_queue != NULL)
 		{
 			osMessageQueuePut(s_uart1_event_queue, &msg, 0, 0);
@@ -392,7 +392,7 @@ static void cm_serial_uart2_callback(void *param, uint32_t type)
 	{
 		/* 触发其他线程处理事件 */
 		msg.msg_type = type;
-		
+
 		if (s_uart2_event_queue != NULL)
 		{
 			osMessageQueuePut(s_uart2_event_queue, &msg, 0, 0);
@@ -490,12 +490,13 @@ int custom_uart_send(int dev, uint8_t *data, uint16_t len)
 	return 0;
 }
 
+/* 初始化项目启用的 UART 任务。 */
 int custom_uart_init(void)
 {    
     osThreadAttr_t app_task_attr = {0};
     app_task_attr.stack_size = 1024 * 4;
     app_task_attr.priority = osPriorityNormal;
-	
+
 #ifdef	UART0
     app_task_attr.name  = "uart0_task";
     osThreadNew((osThreadFunc_t)custom_uart0_task, 0, &app_task_attr);
@@ -505,7 +506,7 @@ int custom_uart_init(void)
     app_task_attr.name  = "uart1_task";	
     osThreadNew((osThreadFunc_t)custom_uart1_task, 0, &app_task_attr);
 #endif
-	
+
 #ifdef	UART2
 	app_task_attr.name  = "uart2_task";	
     osThreadNew((osThreadFunc_t)custom_uart2_task, 0, &app_task_attr);

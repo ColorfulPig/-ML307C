@@ -17,7 +17,9 @@
 #define	ONE_SECONED_5_100	(10)		// 50ms
 #define	ONE_SECONED_195_100	(390)		// 1950ms
 
+/* 初始化系统后台任务。 */
 int custom_system_init(void);
+/* 切换模块日志输出到 USB 虚拟 AT 通道。 */
 void custom_system_virt_at_usb(void);
 
 

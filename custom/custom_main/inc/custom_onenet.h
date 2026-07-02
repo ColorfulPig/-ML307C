@@ -133,7 +133,9 @@ enum
 
 extern cm_mqtt_client_t *onenet_mqtt_client;
 
+/* 初始化 OneNET 消息缓存并创建后台任务。 */
 int custom_onenet_init(void);
+/* 发布 OneNET 属性上报消息。 */
 int custom_onenet_send_attribute_post(char *identification[], char *param_value[], int count);
 
 

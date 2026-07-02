@@ -14,10 +14,15 @@
 
 #define	BYTETOHEX(ch)			((ch<10)? (ch+'0'):((ch-10)+'A'))
 
+/* 初始化调试日志缓存。 */
 int custom_track_init(void);
+/* 统一格式化输出调试日志。 */
 int custom_track_printf(const char *_fmt, ...);
+/* 按十六进制格式输出调试数据。 */
 int custom_track_printHex(char *_msg, uint8_t *_data, uint16_t _len);
+/* 按原始字节内容输出调试数据。 */
 int	custom_track_printRaw(char *_msg, uint8_t *_data, uint16_t _len);
+/* 打开或关闭调试日志输出。 */
 int custom_track_enable(uint8_t _onoff);
 
 #define	SYSTEM_printf(fmt, args...)			do { custom_track_printf("[SYSTEM]" fmt, ##args);}while(0)

@@ -19,7 +19,9 @@
 #define UART2		CM_UART_DEV_2		// DBG_UART
 #define UART_USB	0xFF				// USB_UART
 
+/* 初始化项目启用的 UART 任务。 */
 int custom_uart_init(void);
+/* 按串口号发送 UART 数据。 */
 int custom_uart_send(int dev, uint8_t *data, uint16_t len);
 
 #endif

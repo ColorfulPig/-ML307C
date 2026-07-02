@@ -30,7 +30,9 @@ typedef struct
 	uint8_t data[CUSTOM_USB_RECV_LEN];
 } custom_usb_data_t; 
 
+/* 初始化 USB 通道、队列和后台任务。 */
 int custom_usb_init(void);
+/* 通过 USB 通道发送数据。 */
 int custom_usb_send(uint8_t *data, int32_t len);
 
 

@@ -8,6 +8,7 @@ int lbs_location_Update = 0;			// 更新标志
 custom_lbs_location_t lbs_location;
 static int s_lbs_started = 0;
 
+/* 处理 LBS 异步定位结果回调。 */
 void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location,void *cb_arg)
 {
 	cm_lbs_location_platform_e lbs_platform = 0;
@@ -23,7 +24,7 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 		lbs_location.latitude = atof(location->latitude); 			// 纬度 
 		lbs_location.radius = atof(location->radius);				// 精度半径	
 		lbs_location_Update = 1;
-		
+
 		lbs_platform = location->platform;
 		LBS_printf("location.platform=%d\r\n",location->platform);
 		LBS_printf("location.state=%d\r\n",location->state);
@@ -42,7 +43,7 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 		{
 			uint8_t aplikey[64] = {0};
 			cm_lbs_amap_location_attr_t apap_cfg_acqure = {aplikey,0};
-			
+
 			ret = cm_lbs_get_attr(lbs_platform,&apap_cfg_acqure);
 			if(ret == 0)
 			{
@@ -76,6 +77,7 @@ void custom_lbs_cb(cm_lbs_callback_event_e event,cm_lbs_location_rsp_t *location
 	s_lbs_started = 0;
 }
 
+/* 按指定平台启动一次 LBS 定位请求。 */
 int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 {
 	int ret = -1;
@@ -85,7 +87,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		LBS_printf("%s: lbs request is already in progress\r\n", __func__);
 		return 0;
 	}
-	
+
 	if((lbs_platform == CM_LBS_PLAT_AMAP10) || (lbs_platform == CM_LBS_PLAT_AMAP20))
 	{
 		uint8_t aplikey[64] = {0};
@@ -109,7 +111,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		{
 			apap_cfg.show_fields_enable = 1;	// 高德定位2.0是否请求具体的位置描述 0：不请求 1：请求；高德定位1.0默认开启，无此项配置
 		}		
-        
+
 		// LBS初始化
 		ret = cm_lbs_init(lbs_platform, &apap_cfg);
 		LBS_printf("cm_lbs_init ret=%d\r\n",ret);
@@ -117,7 +119,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		{
 			return ret;
 		}
-		
+
 		// 获取平台定位配置信息
 		get_attr_ret = cm_lbs_get_attr(lbs_platform, &apap_cfg_acqure);
 		if(get_attr_ret == 0)
@@ -137,7 +139,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		{
 			cm_lbs_deinit();
 		}
-		
+
 		/*ret = cm_lbs_get_attr(lbs_platform, &apap_cfg_acqure);
 		if(ret == 0)
 		{
@@ -157,7 +159,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		int get_attr_ret = 0;
 
 		// OneOS平台	；CM:LBS:platform:设备pid:请求超时时间(0-60s)time_out:是否启用邻区nearbts_enable
-		
+
 		// 配置OneOS参数
 		custom_profile_getString(CONFIG_ITEM_LBS_ONEOS_PID, pid);
 		noeospos_cfg.pid = pid;				// 设备pid，允许为空字符串，回退模组内置PID
@@ -174,7 +176,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		{
 			return ret;
 		}
-		
+
 		// 获取平台定位配置信息
 		get_attr_ret = cm_lbs_get_attr(lbs_platform, &noeospos_cfg_acqure);
 		if(get_attr_ret == 0)
@@ -194,7 +196,7 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 		{
 			cm_lbs_deinit();
 		}
-		
+
 		/*ret = cm_lbs_get_attr(lbs_platform, &noeospos_cfg_acqure);
 		if(ret == 0)
 		{
@@ -214,16 +216,18 @@ int custom_lbs_start(cm_lbs_location_platform_e lbs_platform)
 
 	return ret;
 }
- 
+
+/* 初始化 LBS 模块状态。 */
 int custom_lbs_init(void)
 {
 	lbs_location_Update = 0;
 	s_lbs_started = 0;
 	memset(&lbs_location, 0, sizeof(lbs_location));
-	
+
 	return 0;
 }
 
+/* 返回 LBS 模块是否已经启动过定位流程。 */
 int custom_lbs_is_started(void)
 {
 	return s_lbs_started;

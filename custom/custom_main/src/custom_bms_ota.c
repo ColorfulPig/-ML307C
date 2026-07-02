@@ -12,10 +12,46 @@
 
 BMS_OTA	bms_ota;
 
+/* 释放 BMS OTA 运行期间申请的文件句柄和缓存资源。 */
+static void custom_bms_ota_release_runtime_resource(void)
+{
+	if(bms_ota.frame != NULL)
+	{
+		cm_free(bms_ota.frame);
+		bms_ota.frame = NULL;
+	}
+	if(bms_ota.data != NULL)
+	{
+		cm_free(bms_ota.data);
+		bms_ota.data = NULL;
+	}
+	if(bms_ota.info != NULL)
+	{
+		cm_free(bms_ota.info);
+		bms_ota.info = NULL;
+	}
+	if(bms_ota.firmware_version != NULL)
+	{
+		cm_free(bms_ota.firmware_version);
+		bms_ota.firmware_version = NULL;
+	}
+	if(bms_ota.file_data_fd >= 0)
+	{
+		cm_fs_close(bms_ota.file_data_fd);
+		bms_ota.file_data_fd = -1;
+	}
+	if(bms_ota.file_info_fd >= 0)
+	{
+		cm_fs_close(bms_ota.file_info_fd);
+		bms_ota.file_info_fd = -1;
+	}
+}
+
+/* 设置 BMS OTA 状态机状态并输出状态日志。 */
 int custom_bms_ota_setState(uint8_t state)
 {
 	BMS_printf("%s: %d to %d.", __func__, bms_ota.upgrade_state, state);
-	
+
 	bms_ota.upgrade_count = 0;
 	bms_ota.upgrade_state = state;
 
@@ -27,7 +63,7 @@ int custom_bms_ota_sendHandshakeCmd(uint32_t firmware_size, char *firmware_versi
 {
 	uint8_t buf[64] = {0};
 	uint16_t pos = 0, ota_crc = 0;
-	
+
 	buf[pos++] = BMS_OTA_HandshakeCmd;				// OTA子命令
 	buf[pos++] = 0;									// 帧序列号高字节
 	buf[pos++] = 0;									// 帧序列号低字节
@@ -61,14 +97,14 @@ int custom_bms_ota_sendDataCmd(uint16_t frame_sn, uint8_t *buf, uint16_t len)
 			memcpy(&bms_ota.frame[pos], buf, len);				// 数据部分		
 			pos += len;
 		}
-		
+
 		ota_crc = calc_crc16(&bms_ota.frame[3], pos - 3);
 		bms_ota.frame[pos++] = (ota_crc >> 0) & 0xFF; 			// Modbus CRC16低字节在前
 		bms_ota.frame[pos++] = (ota_crc >> 8) & 0xFF; 			// Modbus CRC16高字节在后
 
 		custom_bms_send_frame(PRO_CMD0A_BMS_OTA_REQ, (uint8_t)rand(), bms_ota.frame, pos);
 	}
-	
+
 	return 0;
 }
 
@@ -92,6 +128,7 @@ int custom_bms_ota_sendFinishCmd(void)
 	return 0;
 }
 
+/* 处理 BMS 返回的 OTA 应答包并推进升级状态机。 */
 int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 {
 	uint8_t ota_cmd;
@@ -126,12 +163,12 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
         case BMS_OTA_HandshakeCmd_Ack:                	// BMS响应握手包
 		{
 			uint8_t handshake_result = buf[pos];
-			
+
             	// 0x00--成功， 通讯模块收到后发送第一包数据
 			if(handshake_result == 0)
 			{
 				bms_ota.crc_error = 0;
-				
+
              // 发送第一包数据
 				r_len = cm_fs_read(bms_ota.file_data_fd, bms_ota.data, BMS_OTA_DATA_LENGTH);
 				if(r_len == BMS_OTA_DATA_LENGTH)
@@ -140,7 +177,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 					bms_ota.frame_len = BMS_OTA_DATA_LENGTH;
 					bms_ota.frame_sn = 1;
 					custom_bms_ota_sendDataCmd(bms_ota.frame_sn, bms_ota.data, bms_ota.frame_len);
-					
+
 					bms_ota.upgrade_retry = 0;
 					custom_bms_ota_setState(BMS_OTA_STATE_DataAck);
 				}
@@ -161,7 +198,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 				else
 				{
 					custom_bms_ota_sendHandshakeCmd(bms_ota.firmware_file_size, bms_ota.firmware_version);
-					
+
 					custom_bms_ota_setState(BMS_OTA_STATE_Handshake);
 				}
 			}
@@ -179,7 +216,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 		{
 			uint16_t request_sn,current_sn;
 			uint8_t	frame_result;
-			
+
 			request_sn = ota_sn;								// 请求的帧序列号				
 			current_sn = (buf[pos] << 8) + buf[pos + 1];		// 当前接收的帧序列号
 			pos += 2;
@@ -217,7 +254,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 							BMS_printf("%s: cm_fs_seek error!", __func__);
 							return -4;
 						}
-						
+
 						int32_t will_len = ((bms_ota.firmware_file_size - bms_ota.file_read_len) >= BMS_OTA_DATA_LENGTH)? BMS_OTA_DATA_LENGTH:(bms_ota.firmware_file_size - bms_ota.file_read_len);
 						r_len = cm_fs_read(bms_ota.file_data_fd, bms_ota.data, will_len);
 						if(r_len == will_len)
@@ -226,7 +263,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 							bms_ota.frame_len = will_len;
 							bms_ota.frame_sn++;
 							custom_bms_ota_sendDataCmd(bms_ota.frame_sn, bms_ota.data, will_len);
-							
+
 							custom_bms_ota_setState(BMS_OTA_STATE_DataAck);
 						}
 						else
@@ -258,7 +295,7 @@ int custom_bms_ota_OnACK(uint8_t *buf, uint16_t len)
 		default:
 			break;
 	}
-	
+
 	return 0;
 }
 
@@ -268,6 +305,8 @@ int custom_bms_ota_getFirmwareInfo(void)
 	char firmware_url[256] = {0};
 	char firmware_md5[33] = {0};
 	char actual_md5[33] = {0};
+	bms_ota.file_data_fd = -1;
+	bms_ota.file_info_fd = -1;
 
 	// 文件存在
 	if(cm_fs_exist(BMS_FOTA_FILE_SAVE_DIR) == false)	
@@ -286,32 +325,30 @@ int custom_bms_ota_getFirmwareInfo(void)
 	{
 		return -3;
 	}
-	
+
 	// 申请内存
 	bms_ota.frame = cm_malloc(BMS_OTA_FRAME_LENGTH);
 	if(bms_ota.frame == NULL)
 	{
+		custom_bms_ota_release_runtime_resource();
 		return -4;
 	}
 	bms_ota.data = cm_malloc(BMS_OTA_DATA_LENGTH);
 	if(bms_ota.data == NULL)
 	{
-		cm_free(bms_ota.frame);
+		custom_bms_ota_release_runtime_resource();
 		return -5;
 	}
 	bms_ota.info = cm_malloc(bms_ota.firmware_info_size + 1);
 	if(bms_ota.info == NULL)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
+		custom_bms_ota_release_runtime_resource();
 		return -6;
 	}
 	bms_ota.firmware_version = cm_malloc(bms_ota.firmware_info_size);
 	if(bms_ota.firmware_version == NULL)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
+		custom_bms_ota_release_runtime_resource();
 		return -6;
 	}
 
@@ -319,21 +356,14 @@ int custom_bms_ota_getFirmwareInfo(void)
 	bms_ota.file_data_fd = cm_fs_open(BMS_FOTA_FILE_SAVE_DIR, CM_FS_RB);					// 只读方式打开文件
 	if(bms_ota.file_data_fd < 0)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
+		custom_bms_ota_release_runtime_resource();
 		return -7;
 	}
 
 	bms_ota.file_info_fd = cm_fs_open(BMS_FOTA_INFO_SAVE_DIR, CM_FS_RB);							// 只读方式打开文件
 	if(bms_ota.file_info_fd < 0)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -8;
 	}
 
@@ -341,12 +371,7 @@ int custom_bms_ota_getFirmwareInfo(void)
 	int32_t r_len = cm_fs_read(bms_ota.file_info_fd, bms_ota.info, bms_ota.firmware_info_size);
 	if(r_len != bms_ota.firmware_info_size)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -9;
 	}
 	bms_ota.info[bms_ota.firmware_info_size] = 0;
@@ -355,71 +380,45 @@ int custom_bms_ota_getFirmwareInfo(void)
 	int firmware_size = 0;
 	if(sscanf(bms_ota.info, ",%d,%[^,],%255[^,],%32[^,],", &firmware_size, bms_ota.firmware_version, firmware_url, firmware_md5) != 4)
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -10;
 	}
 	if(custom_fota_validate_md5_string(firmware_md5) != 0)
 	{
 		BMS_printf("%s: bms_info_file md5 invalid! md5=%s", __func__, firmware_md5);
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -11;
 	}
 	custom_fota_md5_to_lower(firmware_md5);
 	if(firmware_size != bms_ota.firmware_file_size)		// 文件不完整
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -12;
 	}
 	if(custom_fota_calc_file_md5(BMS_FOTA_FILE_SAVE_DIR, actual_md5) != 0)
 	{
 		BMS_printf("%s: calc bms file md5 failed!", __func__);
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -13;
 	}
 	if(strcmp(firmware_md5, actual_md5) != 0)
 	{
 		BMS_printf("%s: bms file md5 mismatch! expected=%s actual=%s", __func__, firmware_md5, actual_md5);
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.info);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
-		cm_fs_close(bms_ota.file_info_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -14;
 	}
 	cm_free(bms_ota.info);
+	bms_ota.info = NULL;
 	cm_fs_close(bms_ota.file_info_fd);
+	bms_ota.file_info_fd = -1;
 
 	// 拆分版本
 	if((bms_ota.firmware_version == NULL) || (strlen(bms_ota.firmware_version) < 6))
 	{
-		cm_free(bms_ota.frame);
-		cm_free(bms_ota.data);
-		cm_free(bms_ota.firmware_version);
-		cm_fs_close(bms_ota.file_data_fd);
+		custom_bms_ota_release_runtime_resource();
 		return -15;
 	}
-	
+
 	//bms_ota.firmware_version_i = (version_hi << 16) + (version_mid << 8) + version_low;
 
 	BMS_printf("%s ok.firmware_file_size=%d,firmware_version=%s,md5=%s", __func__, bms_ota.firmware_file_size, bms_ota.firmware_version, actual_md5);
@@ -445,7 +444,7 @@ int custom_bms_ota_start(uint8_t save_mode, char *file, uint32_t file_size)
 	{
 		return -2;
 	}
-	
+
 	bms_ota.file_read_len = 0;
 	bms_ota.frame_sn = 0;
 	bms_ota.upgrade_retry = 0;
@@ -455,35 +454,18 @@ int custom_bms_ota_start(uint8_t save_mode, char *file, uint32_t file_size)
 	return 0;
 }
 
+/* 结束 BMS OTA 流程，清理资源并按结果删除临时文件。 */
 int custom_bms_ota_finish(int result)
 {
 	(void)result;
-	// 释放内存
-	if(bms_ota.frame != NULL)
-	{
-		cm_free(bms_ota.frame);
-	}
-	if(bms_ota.data != NULL)
-	{
-		cm_free(bms_ota.data);
-	}
-	if(bms_ota.firmware_version != NULL)
-	{
-		cm_free(bms_ota.firmware_version);
-	}
-	
-	// 关闭文件
-	if(bms_ota.file_data_fd >= 0)
-	{
-		cm_fs_close(bms_ota.file_data_fd);
-	}
+	custom_bms_ota_release_runtime_resource();
 
 	// 删除文件
 	if(cm_fs_exist(BMS_FOTA_FILE_SAVE_DIR) == true)	
 	{
 		cm_fs_delete(BMS_FOTA_FILE_SAVE_DIR);
 	}
-	
+
 	if(cm_fs_exist(BMS_FOTA_INFO_SAVE_DIR) == true)	
 	{
 		cm_fs_delete(BMS_FOTA_INFO_SAVE_DIR);
@@ -497,17 +479,20 @@ int custom_bms_ota_finish(int result)
 	bms_ota.timing_hour = 0;
 
 	custom_bms_ota_setState(BMS_OTA_STATE_Idle);
-	
+
 	return 0;
 }
 
+/* BMS OTA 后台任务，按状态机执行定时升级和数据发送。 */
 void custom_bms_ota_task(void *p)
 {
 	(void)p;
 	cm_tm_t dt;
 	int value;
-	
+
 	memset(&bms_ota, 0, sizeof(bms_ota));
+	bms_ota.file_data_fd = -1;
+	bms_ota.file_info_fd = -1;
 
 	// 获取定时升级参数
 	if(custom_profile_getNumber(CONFIG_ITEM_BMS_TIMING_TASK, &value) == 0)
@@ -530,14 +515,14 @@ void custom_bms_ota_task(void *p)
 			break;
 		}
 	}
-	
+
 	custom_bms_ota_setState(BMS_OTA_STATE_Idle);
 
 	while(1)
 	{
 		osDelay(ONE_SECONED);											// 1s
 		bms_ota.upgrade_count++;
-		
+
 		// 状态机
 		if(bms_ota.upgrade_state == BMS_OTA_STATE_Idle)
 		{			
@@ -624,6 +609,7 @@ void custom_bms_ota_task(void *p)
 	}
 }
 
+/* 初始化 BMS OTA 状态并创建后台任务。 */
 int custom_bms_ota_init(void)
 {
 	// 创建任务

@@ -1,4 +1,4 @@
-
+#include "custom_cloud_lte.h"
 #include "custom_test.h"
 #include "custom_system.h"
 #include "custom_track.h"
@@ -7,6 +7,7 @@
 #include "custom_fota.h"
 #include <inttypes.h>
 
+/* 测试命令中使用的下载地址转换辅助逻辑。 */
 static void custom_test_convert_download_url(const char *src_url, char *dst_url, uint32_t dst_size)
 {
 	if((src_url == NULL) || (dst_url == NULL) || (dst_size == 0))
@@ -26,6 +27,7 @@ static void custom_test_convert_download_url(const char *src_url, char *dst_url,
 	}
 }
 
+/* 测试命令中写入 BMS OTA 信息文件。 */
 static int custom_test_write_bms_info_file(uint32_t firmware_size, const char *firmware_version, const char *firmware_url, const char *firmware_md5)
 {
 	int32_t fd = -1;
@@ -60,10 +62,11 @@ static int custom_test_write_bms_info_file(uint32_t firmware_size, const char *f
 	return 0;
 }
 
+/* 处理 USB 测试命令并模拟蓝牙、BMS、云端或 FOTA 输入。 */
 int custom_test_OnBlock(uint8_t *buf,uint32_t len)
 {
 	if(len < 5)	return -1;
-	
+
 	// 透传数据到蓝牙
 	if(memcmp(buf, "BT:", 3) == 0)
 	{
@@ -139,10 +142,11 @@ int custom_test_OnBlock(uint8_t *buf,uint32_t len)
 			cm_free(param);
 		}
 	}
-	
+
 	return 0;
 }
 
+/* 测试后台任务入口。 */
 void custom_test_task(void *p)
 {
 	(void)p;
@@ -150,11 +154,13 @@ void custom_test_task(void *p)
 	while(1)
 	{
 		//TEST_printf("test_task:777777");
-		
+		//custom_cloud_lte_sendResultFrame(0x60, 0X6A, 0x01, CLOUD_LTE_FOTA_RESULT_ACCEPTED );
+		//TEST_printf("CLOUD_LTE_FOTA: test");
 		osDelay(ONE_SECONED);	// 1秒
 	}
 }
 
+/* 初始化测试命令处理任务。 */
 int custom_test_init(void)
 {    
 	// 创建任务

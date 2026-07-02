@@ -89,7 +89,7 @@ int custom_onenet_make_attribute_post_onejson_string(int id, char *identificatio
 
 	// 设置物模型版本号(String,不填默认为1.0)
 	cJSON_AddStringToObject(onejson, ONENET_MQTT_STANDARD_VERSION, ONENET_MQTT_DEFAULT_VERSION);						
-	
+
 	//////////////////////////参数内容组包////////////////////////////////
 	cJSON* resource = cJSON_CreateObject();
 	for(int k = 0; k < count; k++)
@@ -147,7 +147,7 @@ int custom_onenet_send_attribute_post(char *identification[], char *param_value[
 			return 0;
 		}
 	}
-	
+
 	return -2;
 }
 
@@ -173,7 +173,7 @@ int custom_onenet_on_attribute_set(char *payload)
 	    "msg":"xxx"
 	}
 	*/
-	
+
 	cJSON *response = cJSON_CreateObject();			// 应答
 	cJSON *resources = cJSON_Parse(payload);		// 文本转对象
 	if((resources != NULL) && (response != NULL))
@@ -301,7 +301,7 @@ int custom_onenet_on_attribute_get(char *payload)
 	    }
 	}
 	*/
-	
+
 	cJSON *response = cJSON_CreateObject();			// 应答
 	cJSON *resp_data = cJSON_CreateObject();	
 	cJSON *resources = cJSON_Parse(payload);		// 文本转对象
@@ -447,7 +447,7 @@ static int custom_onenet_mqtt_connack_cb(cm_mqtt_client_t* client, int session, 
 			custom_led_setState(LED_STATE_READY);
 		}
 	}
-           
+
     return 0;
 }
 
@@ -477,7 +477,7 @@ static int custom_onenet_mqtt_publish_cb(cm_mqtt_client_t* client, unsigned shor
 	{
 		ONENET_printf("mqtt_pub_undefined_topic");
 	}
-	
+
 	return 0;
 }
 
@@ -509,7 +509,7 @@ static int custom_onenet_mqtt_pubrel_cb(cm_mqtt_client_t* client, unsigned short
 static int custom_onenet_mqtt_pubcomp_cb(cm_mqtt_client_t* client, unsigned short msgid, char dup)
 {
 	ONENET_printf("%s: msgid=%d,dup=%d.", __func__, msgid, dup);
-	
+
 	return 0;
 }
 
@@ -517,7 +517,7 @@ static int custom_onenet_mqtt_pubcomp_cb(cm_mqtt_client_t* client, unsigned shor
 static int custom_onenet_mqtt_suback_cb(cm_mqtt_client_t* client, unsigned short msgid, int count, int qos[])
 {
 	ONENET_printf("%s: msgid=%d,count=%d.", __func__, msgid, count);
-	
+
 	onenet_mqtt_sub_flag = 1;
 
 	return 0;
@@ -683,7 +683,7 @@ static int32_t custom_onenet_generate_token(
 		}
 	}
 	// version=2018-10-31&res=products%2F0ch7rnzaMM%2Fdevices%2F4G-MQTT&et=1924833600&method=sha1&sign=V817q98BBduPShkD%2BPgNxbEcE%2FQ%3D
-	
+
 	return 0;
 }
 
@@ -699,7 +699,7 @@ static int custom_onenet_mqtt_wait_network_ready(void)
 
 		wait_network_time++;
 		// ONENET_printf("%s: wait_network_time=%d", __func__, wait_network_time);
-		
+
 		if(wait_network_time >= ONENET_MQTT_PDP_ACTIVE_TIME)
 		{
 			ONENET_printf("%s: cm_pm_reboot().", __func__);
@@ -731,6 +731,7 @@ static int custom_onenet_mqtt_wait_system_info_ready(void)
 	return 0;
 }
 
+/* 初始化 OneNET MQTT 客户端、主题和认证参数。 */
 static int custom_onenet_mqtt_client_init(void)
 {
 	// 初始赋值
@@ -744,7 +745,7 @@ static int custom_onenet_mqtt_client_init(void)
 		ONENET_printf("%s: cm_malloc() error.", __func__);
 		return -2;
 	}
-	
+
 	// 【主题】
 	common_sprintf((uint8_t *)mqtt_pub_attr_post_topic, ONENET_MQTT_ATTR_POST_TOPIC, onenet_config_pid, onenet_config_device_name);
 	common_sprintf((uint8_t *)mqtt_pub_attr_post_reply_topic, ONENET_MQTT_ATTR_POST_REPLY_TOPIC, onenet_config_pid, onenet_config_device_name); 
@@ -836,9 +837,9 @@ int custom_onenet_mqtt_connect_server(void)
 																//clean_session;	// 清除标志
 																//conn_flags;		// 连接标志
 	};	
-	
+
 	onenet_mqtt_conn_flag = 0;
-	
+
 	// mqtt连接
 	cm_mqtt_client_connect(onenet_mqtt_client, &conn_options);
 
@@ -850,7 +851,7 @@ int custom_onenet_mqtt_connect_server(void)
 
 		wait_connect_time++;
 		// ONENET_printf("%s: wait_connect_time=%d", __func__, wait_connect_time);
-				
+
 		if(wait_connect_time >= ONENET_MQTT_CONNECT_SERVER_TIME)
 		{
 			ONENET_printf("%s: cm_pm_reboot().", __func__);
@@ -868,7 +869,7 @@ int custom_onenet_mqtt_subscribe_topic(void)
 	uint16_t wait_subscribe_time;
 	char *topic_tmp[3] = {0};
 	char qos_tmp[3] = {0};	
-	
+
 	// 主题列表与QOS列表
 	topic_tmp[0] = mqtt_pub_attr_post_reply_topic;
 	topic_tmp[1] = mqtt_pub_attr_set_topic;
@@ -876,7 +877,7 @@ int custom_onenet_mqtt_subscribe_topic(void)
 	qos_tmp[0] = 0;	
 	qos_tmp[1] = 0;	
 	qos_tmp[2] = 0;
-	
+
 	onenet_mqtt_sub_flag = 0;
 
 	// 订阅mqtt topic
@@ -894,7 +895,7 @@ int custom_onenet_mqtt_subscribe_topic(void)
 
 		wait_subscribe_time++;
 		// ONENET_printf("%s: wait_subscribe_time=%d", __func__, wait_subscribe_time);
-				
+
 		if(wait_subscribe_time >= ONENET_MQTT_SUBSCRIBE_TOPIC_TIME)
 		{
 			ONENET_printf("%s: cm_pm_reboot().", __func__);
@@ -902,7 +903,7 @@ int custom_onenet_mqtt_subscribe_topic(void)
 			cm_pm_reboot();
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -910,12 +911,12 @@ int custom_onenet_mqtt_subscribe_topic(void)
 int custom_onenet_mqtt_disconnect_server(void)
 {
 	uint16_t wait_disconnect_time;
-	
+
 	// 断开连接
 	if(onenet_mqtt_client != NULL)
 	{
 		cm_mqtt_client_disconnect(onenet_mqtt_client);
-		
+
 		// 等待mqtt断开结果
 		wait_disconnect_time = 0;
 		while (onenet_mqtt_conn_flag != 0)
@@ -924,7 +925,7 @@ int custom_onenet_mqtt_disconnect_server(void)
 
 			wait_disconnect_time++;
 			ONENET_printf("%s: wait_disconnect_time=%d", __func__, wait_disconnect_time);
-					
+
 			if(wait_disconnect_time >= ONENET_MQTT_DISCONNECT_SERVER_TIME)
 			{
 				ONENET_printf("%s: cm_pm_reboot().", __func__);
@@ -944,14 +945,15 @@ int custom_onenet_mqtt_disconnect_server(void)
 			onenet_message_payload = NULL;
 		}
 	}
-	
+
 	return 0;
 }
 
+/* OneNET 后台任务，负责联网、连接、订阅和在线维护。 */
 static void custom_onenet_task(void)
 {
 	uint32_t onenet_task_count;
-	
+
 	while(1)
 	{		
 		// 等待网络激活（失败重启）
@@ -961,28 +963,28 @@ static void custom_onenet_task(void)
 		}
 
 		custom_onenet_mqtt_wait_network_ready();
-	    
+
 		// mqtt初始化
 		custom_onenet_mqtt_client_init();
-		
+
 		// 连接服务器（失败重启）
 		custom_onenet_mqtt_connect_server();
 
 		// 订阅主题（失败重启）
 		custom_onenet_mqtt_subscribe_topic();
-		
+
 		// 在线等待
 		onenet_task_count = 0;
 		while(onenet_mqtt_conn_flag == 1)
 		{			
 			osDelay(ONE_SECONED);
 			onenet_task_count++;
-			
+
 			// 定时任务
 			if((onenet_task_count % 10) == 0)
 			{
 				// ONENET_printf("%s: %d.", __func__, onenet_task_count);
-				
+
 			}
 		}
 
@@ -991,6 +993,7 @@ static void custom_onenet_task(void)
 	}
 }
 
+/* 初始化 OneNET 消息缓存并创建后台任务。 */
 int custom_onenet_init(void)
 {
 	osThreadAttr_t app_task_attr = {0};

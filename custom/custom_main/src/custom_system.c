@@ -10,6 +10,7 @@
 #define CUSTOM_SYSTEM_ICCID_RETRY_TIMES		5
 #define CUSTOM_SYSTEM_ICCID_RETRY_DELAY_MS	1000
 #define TEST_Switch							1
+/* 带重试读取 ICCID，避免启动阶段 SIM 信息暂未就绪。 */
 static int custom_system_read_iccid_with_retry(char *iccid, int retry_times, int retry_delay_ms)
 {
 	int ret = -1;
@@ -34,12 +35,13 @@ static int custom_system_read_iccid_with_retry(char *iccid, int retry_times, int
 	return ret;
 }
 
+/* 读取并打印模块 SN、IMEI、IMSI、ICCID、版本和内存信息。 */
 void custom_system_info(void)
 {
 	// 获取模组SN
 	memset(g_SN, 0, SN_BUF_SIZE);
 	cm_sys_get_sn(g_SN); 
-	
+
 	// 获取模组IMEI
 	memset(g_IMEI, 0, IMEI_BUF_SIZE);
 	cm_sys_get_imei(g_IMEI); 
@@ -58,7 +60,7 @@ void custom_system_info(void)
 	// 获取APP版本号
 	common_sprintf((uint8_t *)g_APPVER, "%d.%d.%d", APP_VERSION_HIGH, APP_VERSION_MID, APP_VERSION_LOW);
 	g_ReadyOK = 1;
-	
+
 	// 获取文件系统大小、剩余空间
 	cm_fs_getinfo(&fs_system_info);
 
@@ -66,7 +68,7 @@ void custom_system_info(void)
 	cm_mem_get_heap_stats(&heap_stats);
 
 	/* 静态内存256K */
-	
+
 	SYSTEM_printf("SN: %s", g_SN);
 	SYSTEM_printf("IMEI: %s", g_IMEI);
 	SYSTEM_printf("IMSI: %s", g_IMSI);
@@ -106,16 +108,17 @@ void custom_system_virt_at_usb(void)
 	}
 }
 
+/* 系统后台任务，定时打印时间并补齐启动信息。 */
 void custom_system_task(void *p)
 {
 	cm_tm_t dt;
-		
+
 	custom_system_info();
 
 	// 随机数产生器
 	srand((unsigned int)cm_rtc_get_current_time());
 	//SYSTEM_printf("rand: %d", rand());
-  
+
 	while(1)
 	{
 		// 打印时间
@@ -134,11 +137,12 @@ void custom_system_task(void *p)
 			int ret = custom_system_read_iccid_with_retry(g_ICCID, CUSTOM_SYSTEM_ICCID_RETRY_TIMES, CUSTOM_SYSTEM_ICCID_RETRY_DELAY_MS);
 			SYSTEM_printf("ICCID refresh ret=%d, ICCID: %s", ret, g_ICCID);
 		}
-		
+
 		osDelay(ONE_SECONED * 10);	// 10秒
 	}
 }
 
+/* 初始化系统后台任务。 */
 int custom_system_init(void)
 {    
 	// 创建任务

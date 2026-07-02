@@ -36,13 +36,21 @@
 // 注意：参数改变可能要更新custom_object_create(),custom_profile_update(),custom_profile_load()这三个函数
 
 int custom_profile_init(void);
+/* 修改已存在的数值型配置项。 */
 int custom_profile_setNumber(char *item, int value);
+/* 新增数值型配置项。 */
 int custom_profile_addNumber(char *item, int value);
+/* 读取数值型配置项。 */
 int custom_profile_getNumber(char *item, int *value);
+/* 修改已存在的字符串配置项。 */
 int custom_profile_setString(char *item, char *value);
+/* 新增字符串配置项。 */
 int custom_profile_addString(char *item, char *value);
+/* 读取字符串配置项。 */
 int custom_profile_getString(char *item, char *value);
+/* 保存当前配置对象到配置文件。 */
 int custom_profile_save(void);
+/* 删除配置文件，用于恢复出厂设置。 */
 int custom_profile_delect(void);
 
 

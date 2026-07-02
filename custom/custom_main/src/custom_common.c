@@ -2,6 +2,7 @@
 #include "custom_common.h"
 #include "base64.h"
 
+/* 计算 Modbus CRC16 校验值。 */
 uint16_t calc_crc16(uint8_t *data, uint16_t len)
 {
     uint16_t crc16 = 0xFFFF;
@@ -26,13 +27,14 @@ uint16_t calc_crc16(uint8_t *data, uint16_t len)
     return crc16;
 }
 
+/* 将两个 ASCII 十六进制字符转换为一个字节。 */
 uint8_t	HexCharToByte(char *pBuffer)
 {
 	char	tmp1,tmp2,dat;
-	
+
 	tmp1 = *pBuffer;
 	tmp2 = *(pBuffer+1);
-		
+
 	if((tmp1>='0')&&(tmp1<='9'))
 		tmp1 = tmp1-'0';
 	else if((tmp1>='a')&&(tmp1<='f'))
@@ -45,12 +47,13 @@ uint8_t	HexCharToByte(char *pBuffer)
 		tmp2 = tmp2-'a'+0x0a;
 	else if((tmp2>='A')&&(tmp2<='F'))
 		tmp2 = tmp2-'A'+0x0a;
-	
+
 	dat = tmp1*16 + tmp2;
-	
+
 	return dat;
 }
 
+/* 计算协议数据区的异或校验值。 */
 uint8_t calc_xor(uint8_t *buf, uint16_t len)
 {
 	uint8_t check = buf[0];
@@ -79,7 +82,7 @@ int make_base64(uint8_t flag, uint8_t *in, uint16_t in_len, uint8_t *out, uint16
 					out[k + 2] = out[k];	// 数据往后搬移
 				}
 				w_len += 3;
-			
+
 				out[0] = '{';
 				out[1] = '1';
 				out[w_len - 1] = '}';
@@ -97,7 +100,7 @@ int make_base64(uint8_t flag, uint8_t *in, uint16_t in_len, uint8_t *out, uint16
 					out[k + 3] = out[k];	// 数据往后搬移
 				}
 				w_len += 4;
-		
+
 				out[0] = '{';
 				out[1] = '1';
 				out[2] = '+';
@@ -110,6 +113,7 @@ int make_base64(uint8_t flag, uint8_t *in, uint16_t in_len, uint8_t *out, uint16
 	return w_len;
 }
 
+/* 封装格式化输出，返回写入到缓冲区的字节数。 */
 int32_t common_sprintf(uint8_t* str, const char* format, ...)
 {
 	va_list ap;
@@ -122,16 +126,18 @@ int32_t common_sprintf(uint8_t* str, const char* format, ...)
 	return ret;
 }
 
+/* 按高字节在前的顺序写入 16 位数值。 */
 void CopyWord(uint8_t *pDest,uint16_t value)
 {
 	*pDest = HIBYTE(value);
 	*(pDest+1) = LOBYTE(value);
 }
 
+/* 按高字节在前的顺序写入 32 位数值。 */
 void CopyDword(uint8_t *pDest,uint32_t value)
 {
 	uint16_t	tmp;
-	
+
 	tmp = ((uint16_t)(value>>16))&0xffff;
 	*pDest = HIBYTE(tmp);
 	*(pDest+1) = LOBYTE(tmp);

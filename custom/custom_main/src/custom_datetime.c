@@ -5,6 +5,7 @@
 
 static const char DayOfMon[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
 
+/* 将秒数时间戳转换为日期时间结构。 */
 void custom_seceond_to_datetime(long seconds, cm_tm_t *tTime)
 {
 	unsigned short i,j,iDay;
@@ -54,6 +55,7 @@ void custom_seceond_to_datetime(long seconds, cm_tm_t *tTime)
 	tTime->tm_sec = (seconds % 3600) % 60;
 }
 
+/* 读取当前系统时间并转换为日期时间结构。 */
 void custom_get_now_datetime(cm_tm_t *dt)
 {
     custom_seceond_to_datetime((long)(cm_rtc_get_current_time() + cm_rtc_get_timezone() * 60 * 60), dt);
