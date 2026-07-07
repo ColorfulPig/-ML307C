@@ -18,6 +18,7 @@ enum
 	CLOUD_REPORT_INTERVAL_CTRL = 0x07,			// 监测上报周期设置与查询
 												// Para = 1 设置监测数据上报周期 value—value_H=report period高字节value_L=report period低字节(x2秒）须大于等于5(10秒）小于65535 （2字节）
 												// Para= 2 恢复出厂设置（1小时上报一次）
+	CLOUD_REPORT_LBS_TO_ONENET = 0x09,			// 请求上报 LBS 基站信息到 OneNET
 };
 
 enum
@@ -47,5 +48,3 @@ int custom_cloud_lte_sendResultFrame(uint8_t cid, uint8_t tid, uint8_t cmd, uint
 
 
 #endif
-
-

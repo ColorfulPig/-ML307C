@@ -11,6 +11,7 @@
 #include "custom_gnss.h"
 #include "custom_fota.h"
 #include "custom_profile.h"
+#include "custom_onenet.h"
 #include <inttypes.h>
 
 /* 解析 LTE FOTA 参数:
@@ -388,6 +389,13 @@ int custom_cloud_lte_OnInstruction(uint8_t tid, uint8_t *buf, uint16_t len)
 		}
 		case CLOUD_REPORT_INTERVAL_CTRL:
 		{
+			break;
+		}
+		case CLOUD_REPORT_LBS_TO_ONENET:
+		{
+			// 云端请求平台侧基站定位：读取当前小区信息并上报 OneNET。
+			ret = custom_onenet_send_lbs_post();
+			custom_cloud_lte_sendResultFrame(PRO_CMD50_MODULE, tid, lte_cmd, (ret == 0) ? CLOUD_RESULT_SUCCESS : CLOUD_RESULT_FAIL);
 			break;
 		}
 		default:

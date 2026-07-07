@@ -7,6 +7,7 @@
 #include "custom_network.h"
 #include "custom_led.h"
 #include "custom_sps.h"
+#include "cm_modem_info.h"
 
 #define	ONENET_MQTT_WAIT_SYSTEM_INFO_TIME			30
 
@@ -150,6 +151,124 @@ int custom_onenet_send_attribute_post(char *identification[], char *param_value[
 
 	return -2;
 }
+
+/* 读取当前基站信息并通过 OneNET 物模型 $OneNET_LBS 上报。 */
+int custom_onenet_send_lbs_post(void)
+{
+	cm_cell_info_t cell_info[3] = {0};
+	int cell_count = 0;
+	char id_buf[16] = {0};
+	char *str = NULL;
+	int ret = -1;
+
+	if((onenet_mqtt_client == NULL) || (!custom_onenet_IsLinkOK()) || (onenet_message_payload == NULL))
+	{
+		ONENET_printf("%s: onenet is not ready.", __func__);
+		return -1;
+	}
+
+	cell_count = cm_modem_info_cell(cell_info, _countof(cell_info));
+	if(cell_count <= 0)
+	{
+		ONENET_printf("%s: cm_modem_info_cell ret=%d.", __func__, cell_count);
+		return -2;
+	}
+
+	cJSON *onejson = cJSON_CreateObject();
+	cJSON *params = cJSON_CreateObject();
+	cJSON *lbs = cJSON_CreateObject();
+	cJSON *value = cJSON_CreateArray();
+
+	if((onejson == NULL) || (params == NULL) || (lbs == NULL) || (value == NULL))
+	{
+		cJSON_Delete(onejson);
+		cJSON_Delete(params);
+		cJSON_Delete(lbs);
+		cJSON_Delete(value);
+		return -3;
+	}
+
+	common_sprintf((uint8_t *)id_buf, "%d", ++onenet_message_package_id);
+	cJSON_AddStringToObject(onejson, ONENET_MQTT_STANDARD_ID, id_buf);
+	cJSON_AddStringToObject(onejson, ONENET_MQTT_STANDARD_VERSION, ONENET_MQTT_DEFAULT_VERSION);
+
+	for(int i = 0; i < cell_count; i++)
+	{
+		int rsrp = 10 * ((int)cell_info[i].rsrp - 140);
+		int flag = cell_info[i].primary_cell ? 10 : 20;
+		cJSON *cell = cJSON_CreateObject();
+
+		if(cell == NULL)
+		{
+			continue;
+		}
+
+		ONENET_printf("%s: cell[%d] mcc=%s,mnc=%s,tac=%d,cid=%lu,rsrp=%d,flag=%d.",
+			__func__, i, (char *)cell_info[i].mcc, (char *)cell_info[i].mnc, cell_info[i].tac, (unsigned long)cell_info[i].cid, rsrp, flag);
+
+		cJSON_AddNumberToObject(cell, "mcc", atoi((char *)cell_info[i].mcc));
+		cJSON_AddNumberToObject(cell, "mnc", atoi((char *)cell_info[i].mnc));
+		cJSON_AddNumberToObject(cell, "lac", cell_info[i].tac);
+		cJSON_AddNumberToObject(cell, "cid", cell_info[i].cid);
+		cJSON_AddNumberToObject(cell, "networkType", 5);
+		cJSON_AddNumberToObject(cell, "ss", rsrp);
+		cJSON_AddNumberToObject(cell, "flag", flag);
+		cJSON_AddItemToArray(value, cell);
+	}
+
+	if(cJSON_GetArraySize(value) <= 0)
+	{
+		cJSON_Delete(onejson);
+		cJSON_Delete(params);
+		cJSON_Delete(lbs);
+		cJSON_Delete(value);
+		return -4;
+	}
+
+	// $OneNET_LBS 的 value 必须是基站信息数组，不能走普通字符串属性上报。
+	cJSON_AddItemToObject(lbs, ONENET_MQTT_PARAMS_VALUE, value);
+	cJSON_AddItemToObject(params, ONENET_MQTT_ATTR_LBS_ID, lbs);
+	cJSON_AddItemToObject(onejson, ONENET_MQTT_STANDARD_PARAMS, params);
+
+	str = cJSON_PrintUnformatted(onejson);
+	if(str == NULL)
+	{
+		cJSON_Delete(onejson);
+		return -5;
+	}
+
+	if(strlen(str) >= ONENET_MESSAGE_PAYLOAD_LEN)
+	{
+		ONENET_printf("%s: payload too long, len=%d.", __func__, (int)strlen(str));
+		cm_free(str);
+		cJSON_Delete(onejson);
+		return -6;
+	}
+
+	strcpy(onenet_message_payload, str);
+	ONENET_printf("%s: %s", __func__, onenet_message_payload);
+	cm_free(str);
+	cJSON_Delete(onejson);
+
+	onenet_message_count++;
+	if(onenet_message_count > 3)
+	{
+		onenet_message_count = 0;
+		ONENET_printf("%s: cm_pm_reboot().", __func__);
+		osDelay(1);
+		cm_pm_reboot();
+	}
+
+	ret = cm_mqtt_client_publish(onenet_mqtt_client, mqtt_pub_attr_post_topic, onenet_message_payload, strlen(onenet_message_payload), CM_MQTT_PUBLISH_QOS_1);
+	if(ret <= 0)
+	{
+		ONENET_printf("%s: MQTT publish ERROR!!!, ret = %d", __func__, ret);
+		return -7;
+	}
+
+	return 0;
+}
+
 
 // 属性上报响应
 int custom_onenet_on_attribute_post_reply(char *payload)
@@ -1005,4 +1124,3 @@ int custom_onenet_init(void)
 
 	return 0;
 }
-

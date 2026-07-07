@@ -105,6 +105,8 @@
 #define	ONENET_MQTT_ATTR_TEMP_ID			"temp"			// float
 #define	ONENET_MQTT_ATTR_DATA_DTU			"data_dtu"		// A1透传专用
 
+#define	ONENET_MQTT_ATTR_LBS_ID				"$OneNET_LBS"	// OneNET 基站定位系统属性
+
 typedef enum
 {
 	CM_MQTT_PUBLISH_DUP = 8u,
@@ -137,7 +139,8 @@ extern cm_mqtt_client_t *onenet_mqtt_client;
 int custom_onenet_init(void);
 /* 发布 OneNET 属性上报消息。 */
 int custom_onenet_send_attribute_post(char *identification[], char *param_value[], int count);
+/* 上报当前基站信息给 OneNET 位置服务。 */
+int custom_onenet_send_lbs_post(void);
 
 
 #endif
-
